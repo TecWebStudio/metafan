@@ -93,12 +93,17 @@ export default function DashboardPage() {
     if (!editRow) return;
     setLoading(true);
     const pkCols = columns.filter((c) => c.Key === "PRI");
+    const pkFields = new Set(pkCols.map((c) => c.Field));
     const where: Row = {};
     pkCols.forEach((c) => { where[c.Field] = editRow[c.Field]; });
+    // Exclude PK columns from the SET payload
+    const updateData = Object.fromEntries(
+      Object.entries(formData).filter(([k]) => !pkFields.has(k))
+    );
     const res = await fetch("/api/db", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "update", table: selectedTable, data: formData, where }),
+      body: JSON.stringify({ action: "update", table: selectedTable, data: updateData, where }),
     });
     const data = await res.json();
     setLoading(false);
@@ -112,12 +117,13 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleDelete() {
-    if (!deleteRow) return;
+  async function handleDelete(targetRow?: Row) {
+    const row = targetRow ?? deleteRow;
+    if (!row) return;
     setLoading(true);
     const pkCols = columns.filter((c) => c.Key === "PRI");
     const where: Row = {};
-    pkCols.forEach((c) => { where[c.Field] = deleteRow[c.Field]; });
+    pkCols.forEach((c) => { where[c.Field] = row[c.Field]; });
     const res = await fetch("/api/db", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -423,7 +429,7 @@ export default function DashboardPage() {
                               {columns.map((c) => <td key={c.Field}>{String(row[c.Field] ?? "")}</td>)}
                               <td>
                                 <button
-                                  onClick={() => setConfirm({ msg: "Eliminare questo record?", action: () => { setDeleteRow(row); handleDelete(); } })}
+                                  onClick={() => setConfirm({ msg: "Eliminare questo record?", action: () => handleDelete(row) })}
                                   className="text-xs px-3 py-1 rounded font-semibold text-red-400 hover:text-white"
                                   style={{ background: "rgba(239,68,68,.12)" }}
                                 >

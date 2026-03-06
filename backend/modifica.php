@@ -10,14 +10,15 @@ if(!isset($_SESSION['username'])) {
 }
 
 // prendo tutte le tabelle
-$tables = $conn->query("SHOW TABLES")->fetchAll(PDO::FETCH_NUM);
+$tables = $conn->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")->fetchAll(PDO::FETCH_NUM);
 
 if(isset($_POST['tabella']) && $_POST['tabella'] != ''){
 
     $tabella = $_POST['tabella'];
 
     // PRENDO TUTTE LE COLONNE DELLA CHIAVE PRIMARIA (anche composta)
-    $stmt_pk = $conn->query("SHOW KEYS FROM `$tabella` WHERE Key_name='PRIMARY'");
+    $safe_tab = sanitizeTableName($tabella);
+    $stmt_pk = $conn->query("SELECT name as Column_name FROM pragma_table_info($safe_tab) WHERE pk > 0");
     $primary_keys = $stmt_pk->fetchAll(PDO::FETCH_ASSOC);
 
     $primary = [];
@@ -28,7 +29,7 @@ if(isset($_POST['tabella']) && $_POST['tabella'] != ''){
     // SALVATAGGIO MODIFICHE
     if(isset($_POST['salva_tutto']) && isset($_POST['id_record'])){
 
-        $stmt_col = $conn->query("DESCRIBE `$tabella`");
+        $stmt_col = $conn->query("SELECT name FROM pragma_table_info($safe_tab)");
         $colonne = $stmt_col->fetchAll(PDO::FETCH_ASSOC);
 
         foreach($_POST['id_record'] as $id_key){
@@ -38,7 +39,7 @@ if(isset($_POST['tabella']) && $_POST['tabella'] != ''){
 
             foreach($colonne as $col){
 
-                $field = $col['Field'];
+                $field = $col['name'];
 
                 // NON aggiorno chiavi primarie
                 if(in_array($field, $primary)) continue;

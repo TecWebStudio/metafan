@@ -22,7 +22,7 @@ require "config.php"; // qui c'è la connessione PDO
 
         <?php
         // Prendo tutte le tabelle
-        $stmt = $conn->query("SHOW TABLES");
+        $stmt = $conn->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
         while ($tab = $stmt->fetch(PDO::FETCH_NUM)) {
             $nome_tab = $tab[0];
             // Mantengo selezionata la tabella scelta
@@ -40,9 +40,10 @@ if (isset($_GET['tabella']) && !empty($_GET['tabella'])) {
 
     // Prendo le colonne
     $colonne = [];
-    $stmt_col = $conn->query("DESCRIBE `$nome_tabella`");
+    $safe_nome = sanitizeTableName($nome_tabella);
+    $stmt_col = $conn->query("SELECT name FROM pragma_table_info($safe_nome)");
     while ($col = $stmt_col->fetch(PDO::FETCH_ASSOC)) {
-        $colonne[] = $col['Field'];
+        $colonne[] = $col['name'];
     }
 
     // Prendo i dati

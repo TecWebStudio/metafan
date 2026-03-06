@@ -3,7 +3,7 @@ require "config.php";
 session_start();
 
 // prendo tutte le tabelle
-$stmt = $conn->query("SHOW TABLES");
+$stmt = $conn->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
 $tabelle = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 $messaggio = "";
@@ -17,7 +17,8 @@ if(isset($_POST['aggiungi'])) {
     $campi = [];
     $valori = [];
 
-    $stmt_col = $conn->query("DESCRIBE `$tabella`");
+    $safe_tab = sanitizeTableName($tabella);
+    $stmt_col = $conn->query("SELECT name FROM pragma_table_info($safe_tab)");
     $colonne = $stmt_col->fetchAll(PDO::FETCH_COLUMN);
 
     foreach($colonne as $col){
@@ -55,18 +56,16 @@ if(isset($_GET['success'])){
 // CHIAVI ESTERNE
 // ----------------------
 $foreign_keys = [];
-$stmt_fk = $conn->query("
-    SELECT TABLE_NAME,COLUMN_NAME,REFERENCED_TABLE_NAME,REFERENCED_COLUMN_NAME
-    FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-    WHERE REFERENCED_TABLE_SCHEMA = DATABASE()
-    AND REFERENCED_TABLE_NAME IS NOT NULL
-");
-
-foreach($stmt_fk->fetchAll(PDO::FETCH_ASSOC) as $fk){
-    $foreign_keys[$fk['TABLE_NAME']][$fk['COLUMN_NAME']] = [
-        'tabella'=>$fk['REFERENCED_TABLE_NAME'],
-        'colonna'=>$fk['REFERENCED_COLUMN_NAME']
-    ];
+$all_tabs = $conn->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")->fetchAll(PDO::FETCH_COLUMN);
+foreach ($all_tabs as $tbl) {
+    $safe_tbl = sanitizeTableName($tbl);
+    $fk_rows = $conn->query("SELECT \"from\" as COLUMN_NAME, \"table\" as REFERENCED_TABLE_NAME, \"to\" as REFERENCED_COLUMN_NAME FROM pragma_foreign_key_list($safe_tbl)")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($fk_rows as $fk) {
+        $foreign_keys[$tbl][$fk['COLUMN_NAME']] = [
+            'tabella' => $fk['REFERENCED_TABLE_NAME'],
+            'colonna' => $fk['REFERENCED_COLUMN_NAME'],
+        ];
+    }
 }
 ?>
 
@@ -99,7 +98,8 @@ $tabella_selezionata = $_GET['tabella'] ?? $_POST['tabella'] ?? "";
 
 if($tabella_selezionata != ""){
 
-    $stmt_col = $conn->query("DESCRIBE `$tabella_selezionata`");
+    $safe_tab_sel = sanitizeTableName($tabella_selezionata);
+    $stmt_col = $conn->query("SELECT name FROM pragma_table_info($safe_tab_sel)");
     $colonne = $stmt_col->fetchAll(PDO::FETCH_COLUMN);
 
     echo "<form method='post' action=''>";

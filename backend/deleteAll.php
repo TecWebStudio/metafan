@@ -1,4 +1,5 @@
 <?php
+require "config.php";
 session_start();
 
 if (!isset($_SESSION['username'])) {
@@ -6,21 +7,11 @@ if (!isset($_SESSION['username'])) {
     exit;
 }
 
-$conn = new mysqli("localhost", "root", "", "metafan");
-
-if ($conn->connect_error) {
-    die("Connessione fallita: " . $conn->connect_error);
-}
-
 $messaggio = "";
 
 /* PRENDO TUTTE LE TABELLE DAL DATABASE */
-$result = $conn->query("SHOW TABLES");
-$tabelle = [];
-
-while ($row = $result->fetch_array()) {
-    $tabelle[] = $row[0];
-}
+$result = $conn->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
+$tabelle = $result->fetchAll(PDO::FETCH_COLUMN);
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
@@ -29,20 +20,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (in_array($tabella, $tabelle)) {
 
         // backtick per sicurezza
-        $sql = "DROP TABLE `$tabella`";
+        $safe_tab = sanitizeTableName($tabella);
+        $sql = "DROP TABLE \"$safe_tab\"";
 
-        if ($conn->query($sql) === TRUE) {
+        try {
+            $conn->exec($sql);
             $messaggio = "La relazione '$tabella' è stata eliminata con successo.";
-        } else {
-            $messaggio = "Errore: " . $conn->error;
+        } catch (PDOException $e) {
+            $messaggio = "Errore: " . $e->getMessage();
         }
 
     } else {
         $messaggio = "Tabella non valida.";
     }
 }
-
-$conn->close();
 ?>
 
 <html>

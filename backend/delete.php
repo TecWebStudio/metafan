@@ -8,7 +8,7 @@ if(!isset($_SESSION['username'])){
 }
 
 // prendo tutte le tabelle
-$stmt = $conn->query("SHOW TABLES");
+$stmt = $conn->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
 $tabelle = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 $messaggio = "";
@@ -22,7 +22,8 @@ if(isset($_POST['elimina'])){
     $id = $_POST['id_record'];
 
     // prendo chiave primaria
-    $stmt_pk = $conn->query("SHOW KEYS FROM `$tabella` WHERE Key_name='PRIMARY'");
+    $safe_tab = sanitizeTableName($tabella);
+    $stmt_pk = $conn->query("SELECT name as Column_name FROM pragma_table_info($safe_tab) WHERE pk > 0");
     $primary = $stmt_pk->fetch(PDO::FETCH_ASSOC)['Column_name'];
 
     try{
@@ -74,7 +75,8 @@ $tabella_selezionata = $_GET['tabella'] ?? $_POST['tabella'] ?? "";
 if($tabella_selezionata != ""){
 
     // prendo chiave primaria
-    $stmt_pk = $conn->query("SHOW KEYS FROM `$tabella_selezionata` WHERE Key_name='PRIMARY'");
+    $safe_tab_sel = sanitizeTableName($tabella_selezionata);
+    $stmt_pk = $conn->query("SELECT name as Column_name FROM pragma_table_info($safe_tab_sel) WHERE pk > 0");
     $primary = $stmt_pk->fetch(PDO::FETCH_ASSOC)['Column_name'];
 
     // prendo dati
