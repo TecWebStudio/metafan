@@ -170,3 +170,18 @@ body {
 .toast-in  { animation: toastIn  0.3s ease-out both; }
 .toast-out { animation: toastOut 0.3s ease-in  both; }
 
+/* ── Dashboard wide-view tuning ── */
+@media (min-width: 1800px) {
+  .dashboard-immersive-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .dashboard-immersive-form {
+    max-width: 88rem;
+  }
+
+  .dashboard-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+

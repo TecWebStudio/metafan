@@ -16,6 +16,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const closeMenu = () => setOpen(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
@@ -23,9 +24,6 @@ export default function Navbar() {
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  // Close mobile menu on route change
-  useEffect(() => setOpen(false), [pathname]);
 
   return (
     <>
@@ -96,7 +94,7 @@ export default function Navbar() {
           {/* Mobile toggle */}
           <button
             className="flex md:hidden flex-col gap-[5px] p-2 z-[1001]"
-            onClick={() => setOpen(!open)}
+            onClick={() => setOpen((current) => !current)}
             aria-label="Menu"
           >
             {[0, 1, 2].map((i) => (
@@ -131,6 +129,7 @@ export default function Navbar() {
           <Link
             key={href}
             href={href}
+            onClick={closeMenu}
             className="text-2xl font-semibold text-white hover:text-[#c9a44c] transition-colors"
           >
             {label}
@@ -138,6 +137,7 @@ export default function Navbar() {
         ))}
         <Link
           href="/login"
+          onClick={closeMenu}
           className="mt-4 px-8 py-3 rounded-lg text-base font-semibold text-[#060910]"
           style={{ background: "linear-gradient(135deg,#c9a44c,#a88630)" }}
         >
