@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import OrdersDashboard from "@/components/OrdersDashboard";
 
 type Row = Record<string, unknown>;
 type Column = { Field: string; Key: string; Null: string; Type: string; Default?: unknown };
 type StatItem = { table: string; count: number };
-type View = "overview" | "view" | "add" | "edit" | "delete" | "drop";
+type View = "overview" | "ordini" | "view" | "add" | "edit" | "delete" | "drop";
 const INTERNAL_ROW_ID = "__rowid__";
 
 export default function DashboardPage() {
@@ -227,6 +228,7 @@ export default function DashboardPage() {
 
   const navItems: { id: View; label: string; icon: string }[] = [
     { id: "overview", label: "Panoramica", icon: "📊" },
+    { id: "ordini", label: "Ordini Produzione", icon: "🏭" },
     { id: "view", label: "Visualizza Dati", icon: "🔍" },
     { id: "add", label: "Aggiungi Record", icon: "➕" },
     { id: "edit", label: "Modifica Record", icon: "✏️" },
@@ -302,7 +304,7 @@ export default function DashboardPage() {
 
         {/* Content */}
         <main className="flex-1 overflow-auto px-4 py-5 sm:px-6 lg:px-8 2xl:px-10 2xl:py-8">
-          {selectedTable && view !== "overview" && view !== "drop" && (
+          {selectedTable && view !== "overview" && view !== "ordini" && view !== "drop" && (
             <div className="mb-5 flex flex-col gap-3 rounded-2xl border px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
               style={{ background: "rgba(201,164,76,.04)", borderColor: "rgba(201,164,76,.12)" }}>
               <div>
@@ -349,6 +351,11 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* ORDINI PRODUZIONE */}
+          {view === "ordini" && (
+            <OrdersDashboard />
           )}
 
           {/* VIEW */}

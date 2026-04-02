@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <rect width="120" height="120" rx="16" fill="#0c1120"/>
+  <rect x="30" y="25" width="60" height="65" rx="4" stroke="#c9a44c" stroke-width="2"/>
+  <rect x="40" y="35" width="40" height="30" rx="2" stroke="#c9a44c" stroke-width="1.5" opacity=".5"/>
+  <path d="M50 50 L60 38 L70 50 Z" fill="#c9a44c" opacity=".4"/>
+  <rect x="48" y="50" width="24" height="10" rx="1" fill="#c9a44c" opacity=".3"/>
+  <line x1="60" y1="70" x2="60" y2="90" stroke="#c9a44c" stroke-width="2"/>
+  <rect x="45" y="90" width="30" height="4" rx="2" fill="#c9a44c" opacity=".4"/>
+  <text x="60" y="112" text-anchor="middle" fill="#8899b4" font-size="8" font-family="sans-serif">3D SLS</text>
+</svg>

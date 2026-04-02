@@ -3,9 +3,16 @@ session_start();
 
 // se l'utente è già loggato, va alla pagina principale
 if (isset($_SESSION['username'])) { 
-    header("Location: main.php"); // <-- cambio qui
+    header("Location: main.php");
     exit;
 }
+
+// Account aziendali con ruoli differenziati
+$accounts = [
+    'metafan'  => ['password' => 'metapassword',  'ruolo' => 'admin'],
+    'operatore' => ['password' => 'operatore2026', 'ruolo' => 'operatore'],
+    'manager'  => ['password' => 'manager2026',   'ruolo' => 'manager'],
+];
 
 // controllo login dell'utente
 $error = '';
@@ -13,10 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    // verifico che le credenziali siano corrette
-    if ($username === 'metafan' && $password === 'metapassword') {
-        $_SESSION['username'] = $username; // salvo sessione
-        header("Location: main.php");      // reindirizzo alla pagina principale
+    // verifico le credenziali contro la tabella account
+    if (isset($accounts[$username]) && $accounts[$username]['password'] === $password) {
+        $_SESSION['username'] = $username;
+        $_SESSION['ruolo'] = $accounts[$username]['ruolo'];
+        header("Location: main.php");
         exit;
     } else {
         $error = "Nome utente o password errati!";

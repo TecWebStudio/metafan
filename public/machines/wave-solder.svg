@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <rect width="120" height="120" rx="16" fill="#0c1120"/>
+  <rect x="20" y="35" width="80" height="50" rx="4" stroke="#c9a44c" stroke-width="2"/>
+  <path d="M20 55 Q40 45 60 55 Q80 65 100 55" stroke="#c9a44c" stroke-width="2" fill="none"/>
+  <rect x="35" y="65" width="50" height="8" rx="2" fill="#c9a44c" opacity=".2"/>
+  <circle cx="45" cy="45" r="3" fill="#c9a44c" opacity=".6"/>
+  <circle cx="60" cy="45" r="3" fill="#c9a44c" opacity=".6"/>
+  <circle cx="75" cy="45" r="3" fill="#c9a44c" opacity=".6"/>
+  <rect x="30" y="90" width="60" height="4" rx="2" fill="#c9a44c" opacity=".3"/>
+  <text x="60" y="112" text-anchor="middle" fill="#8899b4" font-size="8" font-family="sans-serif">Wave Solder</text>
+</svg>

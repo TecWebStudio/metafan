@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <rect width="120" height="120" rx="16" fill="#0c1120"/>
+  <rect x="20" y="40" width="80" height="50" rx="4" stroke="#c9a44c" stroke-width="2"/>
+  <circle cx="45" cy="55" r="6" stroke="#c9a44c" stroke-width="1.5"/>
+  <circle cx="75" cy="55" r="6" stroke="#c9a44c" stroke-width="1.5"/>
+  <rect x="38" y="68" width="44" height="3" rx="1.5" fill="#c9a44c" opacity=".5"/>
+  <rect x="38" y="75" width="44" height="3" rx="1.5" fill="#c9a44c" opacity=".3"/>
+  <line x1="45" y1="30" x2="45" y2="40" stroke="#c9a44c" stroke-width="1.5"/>
+  <line x1="75" y1="30" x2="75" y2="40" stroke="#c9a44c" stroke-width="1.5"/>
+  <rect x="40" y="26" width="10" height="6" rx="2" fill="#c9a44c" opacity=".6"/>
+  <rect x="70" y="26" width="10" height="6" rx="2" fill="#c9a44c" opacity=".6"/>
+  <text x="60" y="112" text-anchor="middle" fill="#8899b4" font-size="8" font-family="sans-serif">Pick &amp; Place</text>
+</svg>

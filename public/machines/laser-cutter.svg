@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <rect width="120" height="120" rx="16" fill="#0c1120"/>
+  <rect x="20" y="40" width="80" height="45" rx="4" stroke="#c9a44c" stroke-width="2"/>
+  <line x1="60" y1="20" x2="60" y2="40" stroke="#c9a44c" stroke-width="2"/>
+  <circle cx="60" cy="18" r="4" fill="#c9a44c" opacity=".6"/>
+  <line x1="60" y1="40" x2="40" y2="70" stroke="#c9a44c" stroke-width="1.5" stroke-dasharray="3 2"/>
+  <line x1="60" y1="40" x2="80" y2="70" stroke="#c9a44c" stroke-width="1.5" stroke-dasharray="3 2"/>
+  <rect x="30" y="75" width="60" height="3" rx="1.5" fill="#c9a44c" opacity=".3"/>
+  <rect x="25" y="90" width="70" height="4" rx="2" fill="#c9a44c" opacity=".2"/>
+  <text x="60" y="112" text-anchor="middle" fill="#8899b4" font-size="8" font-family="sans-serif">Laser CO₂</text>
+</svg>
