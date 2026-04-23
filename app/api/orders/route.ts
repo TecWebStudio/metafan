@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import db from "@/lib/db";
 
 async function isAuth() {
   const cookieStore = await cookies();
@@ -38,6 +39,8 @@ export interface ProductionOrder {
   operatore: string;
   lotto: string;
 }
+
+type OrdersSource = "mock" | "plc";
 
 const MACHINE_IMAGES: Record<MachineType, string> = {
   "CNC Fresatrice 5-Assi": "/machines/cnc-5axis.svg",
@@ -94,7 +97,6 @@ function generateOrders(): ProductionOrder[] {
   for (let i = 1; i <= 24; i++) {
     const macchina = machines[(i - 1) % machines.length];
     const spec = MACHINE_SPECS[macchina];
-    // Clamp ore to minimum 0.5 to prevent negative values from Math.sin oscillation
     const ore = Math.max(0.5, +(1.5 + Math.abs(Math.sin(i)) * 3 + Math.random() * 2).toFixed(1));
     const tempoMin = Math.max(1, Math.round(ore * 60 * (0.7 + Math.random() * 0.3)));
     const consumoStd = Math.max(0.1, +(ore * (3.5 + Math.random())).toFixed(1));
@@ -143,6 +145,19 @@ export interface AggregatedStats {
 
 function aggregateStats(orders: ProductionOrder[]): AggregatedStats {
   const totale = orders.length;
+  if (totale === 0) {
+    return {
+      totale_ordini: 0,
+      ore_totali: 0,
+      consumo_totale_kwh: 0,
+      consumo_standard_totale_kwh: 0,
+      risparmio_percentuale: 0,
+      tasso_superamento: 0,
+      tempo_medio_min: 0,
+      per_macchina: [],
+    };
+  }
+
   const oreTotali = +orders.reduce((s, o) => s + o.ore_lavorate, 0).toFixed(1);
   const consumoTotale = +orders.reduce((s, o) => s + o.consumo_kwh, 0).toFixed(1);
   const consumoStdTotale = +orders.reduce((s, o) => s + o.consumo_standard_kwh, 0).toFixed(1);
@@ -182,15 +197,156 @@ function aggregateStats(orders: ProductionOrder[]): AggregatedStats {
   };
 }
 
-const cachedOrders = generateOrders();
-const cachedStats = aggregateStats(cachedOrders);
+const VALID_MACHINES = new Set<MachineType>(Object.keys(MACHINE_SPECS) as MachineType[]);
+const VALID_ESITI = new Set<OrderStatus>(["Superato", "Scarto", "Necessita revisione"]);
 
-export async function GET() {
+function asMachineType(value: unknown): MachineType {
+  const machine = String(value ?? "");
+  if (VALID_MACHINES.has(machine as MachineType)) {
+    return machine as MachineType;
+  }
+  return "Flying Probe Tester";
+}
+
+function asOrderStatus(value: unknown): OrderStatus {
+  const status = String(value ?? "");
+  if (VALID_ESITI.has(status as OrderStatus)) {
+    return status as OrderStatus;
+  }
+  return "Necessita revisione";
+}
+
+function parseResources(value: unknown, machine: MachineType): string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item));
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return MACHINE_SPECS[machine].risorse;
+    }
+
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => String(item));
+        }
+      } catch {
+        // Fall through to csv split.
+      }
+    }
+
+    const csv = trimmed.split(",").map((item) => item.trim()).filter(Boolean);
+    return csv.length > 0 ? csv : MACHINE_SPECS[machine].risorse;
+  }
+
+  return MACHINE_SPECS[machine].risorse;
+}
+
+function toNumber(value: unknown, fallback: number): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+async function loadOrdersFromDb(): Promise<ProductionOrder[]> {
+  const result = await db.execute(
+    `SELECT
+      id,
+      codice_ordine,
+      macchina,
+      immagine_macchina,
+      ore_lavorate,
+      tempo_produzione_min,
+      consumo_kwh,
+      consumo_standard_kwh,
+      risorse_utilizzate,
+      descrizione_ciclo,
+      esito,
+      data_produzione,
+      operatore,
+      lotto
+    FROM ordini_produzione
+    ORDER BY data_produzione DESC, id DESC
+    LIMIT 500`
+  );
+
+  return result.rows.map((row) => {
+    const raw = row as Record<string, unknown>;
+    const macchina = asMachineType(raw.macchina);
+    const spec = MACHINE_SPECS[macchina];
+
+    return {
+      id: toNumber(raw.id, 0),
+      codice_ordine: String(raw.codice_ordine ?? `ORD-DB-${Date.now()}`),
+      macchina,
+      immagine_macchina: String(raw.immagine_macchina ?? MACHINE_IMAGES[macchina]),
+      ore_lavorate: +toNumber(raw.ore_lavorate, 0).toFixed(1),
+      tempo_produzione_min: Math.max(1, Math.round(toNumber(raw.tempo_produzione_min, 1))),
+      consumo_kwh: +toNumber(raw.consumo_kwh, 0).toFixed(1),
+      consumo_standard_kwh: +toNumber(raw.consumo_standard_kwh, 0).toFixed(1),
+      risorse_utilizzate: parseResources(raw.risorse_utilizzate, macchina),
+      descrizione_ciclo: String(raw.descrizione_ciclo ?? spec.descrizione),
+      esito: asOrderStatus(raw.esito),
+      data_produzione: String(raw.data_produzione ?? new Date().toISOString().slice(0, 10)),
+      operatore: String(raw.operatore ?? "N/D"),
+      lotto: String(raw.lotto ?? "N/D"),
+    };
+  });
+}
+
+function isMissingOrdersTableError(err: unknown): boolean {
+  const message = String(err ?? "").toLowerCase();
+  return message.includes("no such table") && message.includes("ordini_produzione");
+}
+
+function parseSource(url: string): OrdersSource {
+  const source = new URL(url).searchParams.get("source");
+  return source === "plc" ? "plc" : "mock";
+}
+
+export async function GET(req: Request) {
   if (!(await isAuth())) return unauthorized();
 
-  return NextResponse.json({
-    ok: true,
-    orders: cachedOrders,
-    stats: cachedStats,
-  });
+  const sourceRequested = parseSource(req.url);
+
+  try {
+    if (sourceRequested === "mock") {
+      const mockOrders = generateOrders();
+      return NextResponse.json({
+        ok: true,
+        orders: mockOrders,
+        stats: aggregateStats(mockOrders),
+        sourceRequested,
+        sourceUsed: "mock" as OrdersSource,
+      });
+    }
+
+    const orders = await loadOrdersFromDb();
+    const stats = aggregateStats(orders);
+
+    return NextResponse.json({
+      ok: true,
+      orders,
+      stats,
+      sourceRequested,
+      sourceUsed: "plc" as OrdersSource,
+    });
+  } catch (error) {
+    if (sourceRequested === "plc" && isMissingOrdersTableError(error)) {
+      const mockOrders = generateOrders();
+      return NextResponse.json({
+        ok: true,
+        orders: mockOrders,
+        stats: aggregateStats(mockOrders),
+        sourceRequested,
+        sourceUsed: "mock" as OrdersSource,
+        fallbackReason: "Tabella ordini_produzione non trovata su Turso",
+      });
+    }
+
+    console.error("Errore API ordini:", error);
+    return NextResponse.json({ ok: false, error: "Errore caricamento ordini" }, { status: 500 });
+  }
 }

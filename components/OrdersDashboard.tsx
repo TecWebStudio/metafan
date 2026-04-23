@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import type { ProductionOrder, AggregatedStats } from "@/app/api/orders/route";
+import type { PlcReading } from "@/app/api/plc-readings/route";
 
 type SortKey = "macchina" | "ore_lavorate" | "tempo_produzione_min";
+type OrdersSource = "mock" | "plc";
 
 function insightText(value: number, label: string, positiveIsGood = true): string {
   if (positiveIsGood && value > 0) return `Risparmio del ${value.toFixed(1)}% rispetto allo standard di mercato`;
@@ -25,23 +27,48 @@ export default function OrdersDashboard() {
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [stats, setStats] = useState<AggregatedStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [source, setSource] = useState<OrdersSource>("mock");
+  const [sourceUsed, setSourceUsed] = useState<OrdersSource>("mock");
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("macchina");
   const [sortAsc, setSortAsc] = useState(true);
+  const [plcReadings, setPlcReadings] = useState<PlcReading[]>([]);
+  const [plcError, setPlcError] = useState("");
 
   const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    setPlcError("");
+
+    if (source === "plc") {
+      try {
+        const res = await fetch("/api/plc-readings");
+        if (res.status === 401) { router.push("/login"); return; }
+        const data = await res.json() as { ok: boolean; readings?: PlcReading[]; error?: string };
+        if (data.ok) {
+          setPlcReadings(data.readings ?? []);
+          setSourceUsed("plc");
+        } else {
+          setPlcError(data.error ?? "Errore sconosciuto");
+        }
+      } catch { setPlcError("Errore di rete"); } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     try {
-      const res = await fetch("/api/orders");
-      const data = await res.json();
+      const res = await fetch("/api/orders?source=mock");
+      const data = await res.json() as { ok: boolean; orders?: ProductionOrder[]; stats?: AggregatedStats; sourceUsed?: string };
       if (res.status === 401) { router.push("/login"); return; }
       if (data.ok) {
-        setOrders(data.orders);
-        setStats(data.stats);
+        setOrders(data.orders ?? []);
+        setStats(data.stats ?? null);
+        setSourceUsed((data.sourceUsed as OrdersSource) ?? "mock");
       }
     } catch { /* network error */ } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, source]);
 
   useEffect(() => { void fetchOrders(); }, [fetchOrders]);
 
@@ -69,6 +96,29 @@ export default function OrdersDashboard() {
 
   return (
     <div>
+      <div className="mb-4 flex items-center justify-end gap-3">
+        <button
+          onClick={() => setSource((prev) => (prev === "mock" ? "plc" : "mock"))}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+          style={{
+            background: source === "plc" ? "rgba(74,222,128,.14)" : "rgba(201,164,76,.12)",
+            border: source === "plc" ? "1px solid rgba(74,222,128,.3)" : "1px solid rgba(201,164,76,.25)",
+            color: source === "plc" ? "#4ade80" : "#c9a44c",
+          }}
+        >
+          Fonte dati: {source === "plc" ? "PLC" : "Mock"}
+        </button>
+        <span className="text-[11px] text-[#8899b4]">In uso: {sourceUsed === "plc" ? "PLC" : "Mock"}</span>
+      </div>
+
+      {/* ── PLC READINGS VIEW ── */}
+      {source === "plc" && (
+        <PlcReadingsPanel readings={plcReadings} error={plcError} />
+      )}
+
+      {/* ── MOCK / ORDERS VIEW ── */}
+      {source !== "plc" && (<>
+
       {/* BI Stats Cards */}
       {stats && (
         <div className="mb-8">
@@ -285,15 +335,141 @@ export default function OrdersDashboard() {
         </div>
       </div>
 
-      {/* Detail Modal */}
-      {selectedOrder && (
-        <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
-      )}
+        {/* Detail Modal */}
+        {selectedOrder && (
+          <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+        )}
+      </>)}
     </div>
   );
 }
 
 /* ── Sub-components ── */
+
+function PlcReadingsPanel({ readings, error }: { readings: PlcReading[]; error: string }) {
+  if (error) {
+    return (
+      <div className="rounded-xl p-6 text-center" style={{ border: "1px solid rgba(239,68,68,.3)", background: "rgba(239,68,68,.06)" }}>
+        <p className="text-sm text-[#f87171] font-semibold">Errore lettura PLC</p>
+        <p className="text-xs text-[#8899b4] mt-1">{error}</p>
+      </div>
+    );
+  }
+
+  if (readings.length === 0) {
+    return (
+      <div className="rounded-xl p-10 text-center" style={{ border: "1px solid rgba(201,164,76,.15)", background: "rgba(201,164,76,.04)" }}>
+        <p className="text-2xl mb-3">📡</p>
+        <p className="text-sm font-semibold text-white">Nessuna rilevazione disponibile</p>
+        <p className="text-xs text-[#8899b4] mt-1">
+          I dati appaiono qui quando <code className="font-mono">backend/main.py</code> è in esecuzione e il robot è connesso.
+        </p>
+      </div>
+    );
+  }
+
+  /* group readings by timestamp batch (same second = same poll cycle) */
+  const byTs = new Map<string, PlcReading[]>();
+  for (const r of readings) {
+    const key = r.timestamp.slice(0, 19); // seconds precision
+    const group = byTs.get(key) ?? [];
+    group.push(r);
+    byTs.set(key, group);
+  }
+  const batches = Array.from(byTs.entries()).slice(0, 30); // latest 30 poll cycles
+
+  return (
+    <div className="space-y-6">
+      {/* Summary cards */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="glow-card rounded-xl p-5">
+          <p className="text-xs text-[#8899b4] uppercase tracking-wider mb-2">Rilevazioni totali</p>
+          <p className="text-2xl font-black" style={{ color: "#4ade80" }}>{readings.length}</p>
+        </div>
+        <div className="glow-card rounded-xl p-5">
+          <p className="text-xs text-[#8899b4] uppercase tracking-wider mb-2">Cicli di lettura</p>
+          <p className="text-2xl font-black" style={{ color: "#4ade80" }}>{byTs.size}</p>
+        </div>
+        <div className="glow-card rounded-xl p-5">
+          <p className="text-xs text-[#8899b4] uppercase tracking-wider mb-2">Ultima lettura</p>
+          <p className="text-sm font-bold text-white">{readings[0]?.timestamp.slice(0, 19).replace("T", " ")}</p>
+        </div>
+      </div>
+
+      {/* Latest poll cycle — live register values */}
+      {batches[0] && (
+        <div>
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3 flex items-center gap-2">
+            <span className="w-6 h-0.5" style={{ background: "#4ade80" }} />
+            Ultimo snapshot robot (linea {batches[0][1][0]?.id_linea})
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {batches[0][1].map((r) => {
+              const isActive = r.valore !== 0;
+              return (
+                <div key={r.id_parametro} className="glow-card rounded-xl p-4">
+                  <p className="text-xs text-[#8899b4] mb-1">{r.nome_parametro}</p>
+                  <p className="text-2xl font-black" style={{ color: isActive ? "#4ade80" : "#c9a44c" }}>
+                    {r.valore}
+                    {r.unita_misura ? <span className="text-sm font-medium ml-1 text-[#8899b4]">{r.unita_misura}</span> : null}
+                  </p>
+                  <p className="text-[10px] mt-1" style={{ color: isActive ? "#4ade80" : "#8899b4" }}>
+                    {isActive ? "● ATTIVO" : "○ inattivo"}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Historical table */}
+      <div>
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3 flex items-center gap-2">
+          <span className="w-6 h-0.5" style={{ background: "#c9a44c" }} />
+          Storico rilevazioni (ultimi {readings.length} campioni)
+        </h3>
+        <div className="glow-card rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="dash-table w-full text-sm">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Linea</th>
+                  <th>Parametro</th>
+                  <th>Valore</th>
+                  <th>U.M.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {readings.map((r) => (
+                  <tr key={r.id_rilevazione}>
+                    <td className="font-mono text-xs text-[#8899b4]">{r.timestamp.slice(0, 19).replace("T", " ")}</td>
+                    <td className="text-center">{r.id_linea}</td>
+                    <td className="text-white font-medium">{r.nome_parametro}</td>
+                    <td>
+                      <span
+                        className="px-2 py-0.5 rounded font-mono text-xs font-semibold"
+                        style={
+                          r.valore !== 0
+                            ? { background: "rgba(74,222,128,.12)", color: "#4ade80" }
+                            : { background: "rgba(255,255,255,.04)", color: "#8899b4" }
+                        }
+                      >
+                        {r.valore}
+                      </span>
+                    </td>
+                    <td className="text-xs text-[#8899b4]">{r.unita_misura || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function StatCard({ label, value, insight, icon, positive }: {
   label: string; value: string; insight: string; icon: string; positive?: boolean;
