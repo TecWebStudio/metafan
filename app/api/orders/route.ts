@@ -94,10 +94,11 @@ function generateOrders(): ProductionOrder[] {
   for (let i = 1; i <= 24; i++) {
     const macchina = machines[(i - 1) % machines.length];
     const spec = MACHINE_SPECS[macchina];
-    const ore = +(1.5 + Math.sin(i) * 3 + Math.random() * 2).toFixed(1);
-    const tempoMin = Math.round(ore * 60 * (0.7 + Math.random() * 0.3));
-    const consumoStd = +(ore * (3.5 + Math.random())).toFixed(1);
-    const consumo = +(consumoStd * (0.82 + Math.random() * 0.12)).toFixed(1);
+    // Clamp ore to minimum 0.5 to prevent negative values from Math.sin oscillation
+    const ore = Math.max(0.5, +(1.5 + Math.abs(Math.sin(i)) * 3 + Math.random() * 2).toFixed(1));
+    const tempoMin = Math.max(1, Math.round(ore * 60 * (0.7 + Math.random() * 0.3)));
+    const consumoStd = Math.max(0.1, +(ore * (3.5 + Math.random())).toFixed(1));
+    const consumo = Math.max(0.1, +(consumoStd * (0.82 + Math.random() * 0.12)).toFixed(1));
     const giorno = String(Math.max(1, i % 28 + 1)).padStart(2, "0");
 
     orders.push({

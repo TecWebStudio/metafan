@@ -8,8 +8,49 @@ import OrdersDashboard from "@/components/OrdersDashboard";
 type Row = Record<string, unknown>;
 type Column = { Field: string; Key: string; Null: string; Type: string; Default?: unknown };
 type StatItem = { table: string; count: number };
-type View = "overview" | "ordini" | "view" | "add" | "edit" | "delete" | "drop";
+type View = "overview" | "ordini" | "macchine" | "view" | "add" | "edit" | "delete" | "drop" | "vpn";
+type MachineStatus = "active" | "maintenance" | "offline";
+
+interface MachineSpec {
+  name: string;
+  abbr: string;
+  basePowerKw: number;
+  baseConsumptionKwh: number;
+  maxTempC: number;
+}
+
+interface MachineConfig {
+  power: number;   // 0–100 %
+  status: MachineStatus;
+}
+
+const MACHINE_SPECS: MachineSpec[] = [
+  { name: "CNC Fresatrice 5-Assi", abbr: "CN", basePowerKw: 7.5,  baseConsumptionKwh: 3.2, maxTempC: 85  },
+  { name: "Pick & Place SMT",       abbr: "PP", basePowerKw: 2.1,  baseConsumptionKwh: 1.8, maxTempC: 45  },
+  { name: "Reflow Oven IR",         abbr: "RF", basePowerKw: 12.0, baseConsumptionKwh: 4.8, maxTempC: 260 },
+  { name: "AOI Saki BF-Comet",      abbr: "AO", basePowerKw: 0.8,  baseConsumptionKwh: 0.6, maxTempC: 40  },
+  { name: "Stampante 3D SLS",       abbr: "3D", basePowerKw: 3.5,  baseConsumptionKwh: 2.8, maxTempC: 200 },
+  { name: "Laser Cutter CO₂",       abbr: "LC", basePowerKw: 5.0,  baseConsumptionKwh: 3.5, maxTempC: 60  },
+  { name: "Saldatrice a Onda",      abbr: "SW", basePowerKw: 8.0,  baseConsumptionKwh: 4.2, maxTempC: 250 },
+  { name: "Flying Probe Tester",    abbr: "FP", basePowerKw: 0.5,  baseConsumptionKwh: 0.4, maxTempC: 35  },
+];
+
+const MS_LABEL:  Record<MachineStatus, string> = { active: "Attiva", maintenance: "Manutenzione", offline: "Offline" };
+const MS_COLOR:  Record<MachineStatus, string> = { active: "#4ade80", maintenance: "#fbbf24", offline: "#f87171" };
+const MS_BG:     Record<MachineStatus, string> = { active: "rgba(34,197,94,.12)", maintenance: "rgba(251,191,36,.12)", offline: "rgba(239,68,68,.12)" };
+const MS_BORDER: Record<MachineStatus, string> = { active: "rgba(34,197,94,.25)", maintenance: "rgba(251,191,36,.25)", offline: "rgba(239,68,68,.25)" };
+
+function initMachineConfigs(): Record<string, MachineConfig> {
+  return Object.fromEntries(MACHINE_SPECS.map((m) => [m.name, { power: 80, status: "active" as MachineStatus }]));
+}
+type VpnStatus = "disconnected" | "connecting" | "connected";
 const INTERNAL_ROW_ID = "__rowid__";
+
+const VPN_SESSIONS = [
+  { user: "M. Rossi",    ip: "192.168.1.101", location: "Milano, IT",  since: "09:32", activity: "Dashboard Ordini" },
+  { user: "L. Bianchi",  ip: "192.168.1.102", location: "Roma, IT",    since: "10:15", activity: "Visualizza Dati"  },
+  { user: "A. Ferrari",  ip: "10.0.0.23",     location: "Torino, IT",  since: "11:02", activity: "Aggiorna Record"  },
+];
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -27,6 +68,28 @@ export default function DashboardPage() {
   const [confirm, setConfirm] = useState<{ msg: string; action: () => void } | null>(null);
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // VPN state
+  const [vpnStatus, setVpnStatus] = useState<VpnStatus>("disconnected");
+  const [vpnConnectedAt, setVpnConnectedAt] = useState<string | null>(null);
+
+  // Machine management state
+  const [machineConfigs, setMachineConfigs] = useState<Record<string, MachineConfig>>(initMachineConfigs);
+  const [managingMachine, setManagingMachine] = useState<string | null>(null);
+
+  function updateMachinePower(name: string, power: number) {
+    setMachineConfigs((prev) => ({ ...prev, [name]: { ...prev[name], power } }));
+  }
+  function updateMachineStatus(name: string, status: MachineStatus) {
+    setMachineConfigs((prev) => ({ ...prev, [name]: { ...prev[name], status } }));
+  }
+
+  // Current user (read from non-httpOnly cookie)
+  const [currentUser, setCurrentUser] = useState("metafan");
+  useEffect(() => {
+    const match = document.cookie.split(";").find((c) => c.trim().startsWith("mf_user="));
+    if (match) setCurrentUser(match.split("=")[1]?.trim() ?? "metafan");
+  }, []);
 
   function showToast(msg: string, type: "ok" | "err" = "ok") {
     setToast({ msg, type });
@@ -69,10 +132,7 @@ export default function DashboardPage() {
           fetchJson<{ ok: true; stats: StatItem[] }>("/api/db?action=stats"),
         ]);
 
-        if (cancelled) {
-          return;
-        }
-
+        if (cancelled) return;
         setTables(tablesData.tables);
         setStats(statsData.stats);
       } catch (error) {
@@ -83,10 +143,7 @@ export default function DashboardPage() {
     }
 
     void hydrateDashboard();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [fetchJson]);
 
   async function loadTableData(table: string) {
@@ -221,24 +278,45 @@ export default function DashboardPage() {
     router.push("/login");
   }
 
+  // VPN connection simulation
+  function handleVpnToggle() {
+    if (vpnStatus === "connected") {
+      setVpnStatus("disconnected");
+      setVpnConnectedAt(null);
+      showToast("VPN disconnessa");
+    } else if (vpnStatus === "disconnected") {
+      setVpnStatus("connecting");
+      setTimeout(() => {
+        setVpnStatus("connected");
+        const now = new Date();
+        setVpnConnectedAt(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
+        showToast("VPN connessa — tunnel sicuro attivo");
+      }, 2500);
+    }
+  }
+
   const writableCols = columns.filter((c) => c.Key !== "PRI");
   const editableCols = columns;
   const selectedTableStat = stats.find((item) => item.table === selectedTable);
   const summaryColumns = columns.slice(0, 3);
 
   const navItems: { id: View; label: string; icon: string }[] = [
-    { id: "overview", label: "Panoramica", icon: "📊" },
-    { id: "ordini", label: "Ordini Produzione", icon: "🏭" },
-    { id: "view", label: "Visualizza Dati", icon: "🔍" },
-    { id: "add", label: "Aggiungi Record", icon: "➕" },
-    { id: "edit", label: "Modifica Record", icon: "✏️" },
-    { id: "delete", label: "Elimina Record", icon: "🗑️" },
-    { id: "drop", label: "Elimina Tabella", icon: "⚠️" },
+    { id: "overview",  label: "Panoramica",        icon: "📊" },
+    { id: "ordini",    label: "Ordini Produzione",  icon: "🏭" },
+    { id: "macchine",  label: "Gestione Macchine",  icon: "⚙️" },
+    { id: "vpn",       label: "VPN Aziendale",      icon: "🔐" },
+    { id: "view",      label: "Visualizza Dati",    icon: "🔍" },
+    { id: "add",       label: "Aggiungi Record",    icon: "➕" },
+    { id: "edit",      label: "Modifica Record",    icon: "✏️" },
+    { id: "delete",    label: "Elimina Record",     icon: "🗑️" },
+    { id: "drop",      label: "Elimina Tabella",    icon: "⚠️" },
   ];
 
   return (
-    <div className="dashboard-shell min-h-screen flex" style={{ background: "#060910" }}>
-      {/* Sidebar */}
+    /* ── h-screen + overflow-hidden keep the sidebar pinned and prevent body scroll ── */
+    <div className="dashboard-shell h-screen flex overflow-hidden" style={{ background: "#060910" }}>
+
+      {/* ── Sidebar ── */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static lg:flex ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
         style={{ width: 260, background: "#0c1120", borderRight: "1px solid rgba(201,164,76,.1)" }}
@@ -261,6 +339,13 @@ export default function DashboardPage() {
             >
               <span>{icon}</span>
               {label}
+              {/* VPN status dot */}
+              {id === "vpn" && vpnStatus !== "disconnected" && (
+                <span
+                  className="ml-auto w-2 h-2 rounded-full"
+                  style={{ background: vpnStatus === "connected" ? "#4ade80" : "#fbbf24" }}
+                />
+              )}
             </button>
           ))}
         </nav>
@@ -278,16 +363,16 @@ export default function DashboardPage() {
         </div>
       </aside>
 
-      {/* Mobile overlay */}
+      {/* ── Mobile overlay ── */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-30 bg-black/60 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* ── Main ── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Topbar */}
         <header
-          className="flex items-center justify-between px-6 py-4 sticky top-0 z-20"
+          className="flex items-center justify-between px-6 py-4 flex-shrink-0"
           style={{ background: "rgba(6,9,16,.9)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(201,164,76,.08)" }}
         >
           <div className="flex items-center gap-3">
@@ -297,14 +382,16 @@ export default function DashboardPage() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-[#8899b4]">metafan</span>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: "rgba(201,164,76,.15)", color: "#c9a44c" }}>MF</div>
+            <span className="text-xs text-[#8899b4]">{currentUser}</span>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: "rgba(201,164,76,.15)", color: "#c9a44c" }}>
+              {currentUser.slice(0, 2).toUpperCase()}
+            </div>
           </div>
         </header>
 
-        {/* Content */}
+        {/* Scrollable content */}
         <main className="flex-1 overflow-auto px-4 py-5 sm:px-6 lg:px-8 2xl:px-10 2xl:py-8">
-          {selectedTable && view !== "overview" && view !== "ordini" && view !== "drop" && (
+          {selectedTable && view !== "overview" && view !== "ordini" && view !== "drop" && view !== "vpn" && (
             <div className="mb-5 flex flex-col gap-3 rounded-2xl border px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
               style={{ background: "rgba(201,164,76,.04)", borderColor: "rgba(201,164,76,.12)" }}>
               <div>
@@ -322,7 +409,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* OVERVIEW */}
+          {/* ── OVERVIEW ── */}
           {view === "overview" && (
             <div>
               <div className="dashboard-immersive-grid grid gap-5 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 mb-8">
@@ -353,12 +440,142 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* ORDINI PRODUZIONE */}
-          {view === "ordini" && (
-            <OrdersDashboard />
+          {/* ── ORDINI PRODUZIONE ── */}
+          {view === "ordini" && <OrdersDashboard />}
+
+          {/* ── VPN AZIENDALE ── */}
+          {view === "vpn" && (
+            <VpnPanel
+              status={vpnStatus}
+              connectedAt={vpnConnectedAt}
+              onToggle={handleVpnToggle}
+              sessions={VPN_SESSIONS}
+            />
           )}
 
-          {/* VIEW */}
+          {/* ── GESTIONE MACCHINE ── */}
+          {view === "macchine" && (
+            <div className="space-y-6">
+              {/* Aggregate stats bar */}
+              <div className="rounded-xl p-5 grid sm:grid-cols-3 gap-4" style={{ background: "rgba(201,164,76,.04)", border: "1px solid rgba(201,164,76,.1)" }}>
+                {[
+                  {
+                    label: "Macchine attive",
+                    value: `${Object.values(machineConfigs).filter((c) => c.status === "active").length} / ${MACHINE_SPECS.length}`,
+                  },
+                  {
+                    label: "Potenza totale",
+                    value: `${MACHINE_SPECS
+                      .filter((m) => machineConfigs[m.name]?.status !== "offline")
+                      .reduce((s, m) => s + +(m.basePowerKw * (machineConfigs[m.name]?.power ?? 80) / 100).toFixed(2), 0)
+                      .toFixed(1)} kW`,
+                  },
+                  {
+                    label: "Consumo totale/ciclo",
+                    value: `${MACHINE_SPECS
+                      .filter((m) => machineConfigs[m.name]?.status !== "offline")
+                      .reduce((s, m) => s + +(m.baseConsumptionKwh * (machineConfigs[m.name]?.power ?? 80) / 100).toFixed(2), 0)
+                      .toFixed(1)} kWh`,
+                  },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <p className="text-xs text-[#8899b4] mb-1">{label}</p>
+                    <p className="text-2xl font-black" style={{ color: "#c9a44c" }}>{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Machine cards grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {MACHINE_SPECS.map((m) => {
+                  const cfg = machineConfigs[m.name] ?? { power: 80, status: "active" as MachineStatus };
+                  const currentPower = +(m.basePowerKw * cfg.power / 100).toFixed(2);
+                  const currentConsumption = +(m.baseConsumptionKwh * cfg.power / 100).toFixed(2);
+                  const currentTemp = cfg.status === "offline" ? 0 : Math.round(m.maxTempC * cfg.power / 100 * 0.9);
+                  const isManaging = managingMachine === m.name;
+
+                  return (
+                    <div
+                      key={m.name}
+                      className="rounded-xl overflow-hidden"
+                      style={{
+                        background: "rgba(255,255,255,.03)",
+                        border: `1px solid ${isManaging ? "rgba(201,164,76,.35)" : "rgba(201,164,76,.1)"}`,
+                        boxShadow: isManaging ? "0 8px 40px rgba(201,164,76,.12)" : "none",
+                        transition: "border-color .2s, box-shadow .2s",
+                      }}
+                    >
+                      <div className="p-4 flex flex-col items-center text-center">
+                        {/* Abbr icon */}
+                        <div
+                          className="w-12 h-12 rounded-lg flex items-center justify-center text-xs font-black mb-3"
+                          style={{
+                            background: "rgba(201,164,76,.12)",
+                            color: cfg.status === "offline" ? "#556680" : "#c9a44c",
+                            border: "1px solid rgba(201,164,76,.2)",
+                            opacity: cfg.status === "offline" ? 0.5 : 1,
+                          }}
+                        >
+                          {m.abbr}
+                        </div>
+                        <h4 className="font-bold text-white text-xs mb-1 leading-tight">{m.name}</h4>
+
+                        {/* Status badge */}
+                        <span
+                          className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full mb-2"
+                          style={{ background: MS_BG[cfg.status], color: MS_COLOR[cfg.status], border: `1px solid ${MS_BORDER[cfg.status]}` }}
+                        >
+                          {MS_LABEL[cfg.status]}
+                        </span>
+
+                        {/* Mini stats */}
+                        {cfg.status !== "offline" && (
+                          <div className="w-full grid grid-cols-2 gap-1.5 mt-1 mb-3">
+                            <div className="rounded-lg p-2 text-center" style={{ background: "rgba(201,164,76,.05)" }}>
+                              <p className="text-[9px] text-[#8899b4] uppercase">Potenza</p>
+                              <p className="text-xs font-bold text-[#c9a44c]">{currentPower} kW</p>
+                            </div>
+                            <div className="rounded-lg p-2 text-center" style={{ background: "rgba(201,164,76,.05)" }}>
+                              <p className="text-[9px] text-[#8899b4] uppercase">Consumo</p>
+                              <p className="text-xs font-bold text-[#c9a44c]">{currentConsumption} kWh</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Manage button */}
+                        <button
+                          onClick={() => setManagingMachine(isManaging ? null : m.name)}
+                          className="w-full py-1.5 rounded-lg text-[11px] font-semibold transition-all"
+                          style={
+                            isManaging
+                              ? { background: "rgba(201,164,76,.2)", color: "#c9a44c", border: "1px solid rgba(201,164,76,.3)" }
+                              : { background: "rgba(255,255,255,.05)", color: "#8899b4", border: "1px solid rgba(255,255,255,.08)" }
+                          }
+                        >
+                          {isManaging ? "Chiudi" : "Gestisci"}
+                        </button>
+                      </div>
+
+                      {/* Inline management panel */}
+                      {isManaging && (
+                        <DashboardMachinePanel
+                          spec={m}
+                          cfg={cfg}
+                          currentPower={currentPower}
+                          currentConsumption={currentConsumption}
+                          currentTemp={currentTemp}
+                          onPowerChange={(v) => updateMachinePower(m.name, v)}
+                          onStatusChange={(s) => updateMachineStatus(m.name, s)}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── VIEW ── */}
           {view === "view" && (
             <div>
               <TableSelector tables={tables} selected={selectedTable} onSelect={(t) => selectTable(t, "view")} />
@@ -377,7 +594,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* ADD */}
+          {/* ── ADD ── */}
           {view === "add" && (
             <div>
               <TableSelector tables={tables} selected={selectedTable} onSelect={(t) => selectTable(t, "add")} />
@@ -395,6 +612,7 @@ export default function DashboardPage() {
                           style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(201,164,76,.15)" }}
                           type={getInputType(c)}
                           placeholder={c.Type}
+                          min={/INT|REAL|FLOA|DOUB|NUMERIC|DECIMAL/.test(c.Type.toUpperCase()) ? "0" : undefined}
                         />
                       </div>
                     ))}
@@ -412,7 +630,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* EDIT */}
+          {/* ── EDIT ── */}
           {view === "edit" && (
             <div>
               <TableSelector tables={tables} selected={selectedTable} onSelect={(t) => selectTable(t, "edit")} />
@@ -448,6 +666,7 @@ export default function DashboardPage() {
                           className="w-full rounded-lg px-4 py-2.5 text-sm text-white placeholder-[#8899b4] outline-none disabled:opacity-40"
                           style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(201,164,76,.15)" }}
                           type={getInputType(c)}
+                          min={/INT|REAL|FLOA|DOUB|NUMERIC|DECIMAL/.test(c.Type.toUpperCase()) ? "0" : undefined}
                         />
                       </div>
                     ))}
@@ -470,7 +689,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* DELETE */}
+          {/* ── DELETE ── */}
           {view === "delete" && (
             <div>
               <TableSelector tables={tables} selected={selectedTable} onSelect={(t) => selectTable(t, "delete")} />
@@ -492,7 +711,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* DROP */}
+          {/* ── DROP ── */}
           {view === "drop" && (
             <div>
               <p className="text-sm text-[#8899b4] mb-6">⚠️ Elimina permanentemente una tabella e tutti i suoi dati.</p>
@@ -515,7 +734,7 @@ export default function DashboardPage() {
         </main>
       </div>
 
-      {/* Toast */}
+      {/* ── Toast ── */}
       {toast && (
         <div
           className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-sm font-medium shadow-lg"
@@ -529,7 +748,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Confirm modal */}
+      {/* ── Confirm modal ── */}
       {confirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="rounded-2xl p-8 max-w-sm w-full text-center" style={{ background: "#0c1120", border: "1px solid rgba(201,164,76,.2)" }}>
@@ -557,6 +776,277 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+/* ─────────────────────────── Machine Panel ─────────────────────────── */
+
+function DashboardMachinePanel({
+  spec,
+  cfg,
+  currentPower,
+  currentConsumption,
+  currentTemp,
+  onPowerChange,
+  onStatusChange,
+}: {
+  spec: MachineSpec;
+  cfg: MachineConfig;
+  currentPower: number;
+  currentConsumption: number;
+  currentTemp: number;
+  onPowerChange: (v: number) => void;
+  onStatusChange: (s: MachineStatus) => void;
+}) {
+  const statuses: MachineStatus[] = ["active", "maintenance", "offline"];
+
+  return (
+    <div className="px-4 pb-5 pt-0" style={{ borderTop: "1px solid rgba(201,164,76,.12)" }}>
+      <div className="pt-4 space-y-5">
+
+        {/* Power slider */}
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <p className="text-[11px] font-bold text-[#c9a44c] uppercase tracking-wider">Livello Potenza</p>
+            <span className="text-xs font-black text-white">{cfg.power}%</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={cfg.power}
+            onChange={(e) => onPowerChange(Number(e.target.value))}
+            disabled={cfg.status === "offline"}
+            className="w-full h-1.5 rounded-full appearance-none cursor-pointer disabled:opacity-40"
+            style={{
+              background: `linear-gradient(to right, #c9a44c ${cfg.power}%, rgba(201,164,76,.15) ${cfg.power}%)`,
+              accentColor: "#c9a44c",
+            }}
+          />
+          <div className="flex justify-between text-[9px] text-[#556680] mt-1">
+            <span>0%</span><span>50%</span><span>100%</span>
+          </div>
+        </div>
+
+        {/* Live stats */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "Potenza", value: cfg.status === "offline" ? "— kW"  : `${currentPower} kW`,         color: "#c9a44c" },
+            { label: "Consumo", value: cfg.status === "offline" ? "— kWh" : `${currentConsumption} kWh`,  color: "#c9a44c" },
+            { label: "Temp.",   value: cfg.status === "offline" ? "— °C"  : `${currentTemp} °C`,          color: currentTemp > spec.maxTempC * 0.85 ? "#f87171" : "#4ade80" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="rounded-lg p-2 text-center" style={{ background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)" }}>
+              <p className="text-[9px] text-[#8899b4] uppercase mb-0.5">{label}</p>
+              <p className="text-[11px] font-bold" style={{ color }}>{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Nominal specs */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-lg p-2 text-center" style={{ background: "rgba(255,255,255,.02)" }}>
+            <p className="text-[9px] text-[#556680] uppercase mb-0.5">Potenza nominale</p>
+            <p className="text-[11px] text-[#8899b4]">{spec.basePowerKw} kW</p>
+          </div>
+          <div className="rounded-lg p-2 text-center" style={{ background: "rgba(255,255,255,.02)" }}>
+            <p className="text-[9px] text-[#556680] uppercase mb-0.5">Cons. max/ciclo</p>
+            <p className="text-[11px] text-[#8899b4]">{spec.baseConsumptionKwh} kWh</p>
+          </div>
+        </div>
+
+        {/* Status buttons */}
+        <div>
+          <p className="text-[11px] font-bold text-[#c9a44c] uppercase tracking-wider mb-2">Stato Operativo</p>
+          <div className="flex gap-1.5">
+            {statuses.map((s) => (
+              <button
+                key={s}
+                onClick={() => onStatusChange(s)}
+                className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold transition-all"
+                style={
+                  cfg.status === s
+                    ? { background: MS_BG[s], color: MS_COLOR[s], border: `1px solid ${MS_BORDER[s]}` }
+                    : { background: "rgba(255,255,255,.04)", color: "#556680", border: "1px solid rgba(255,255,255,.06)" }
+                }
+              >
+                {MS_LABEL[s]}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────── VPN Panel ─────────────────────────── */
+
+function VpnPanel({
+  status,
+  connectedAt,
+  onToggle,
+  sessions,
+}: {
+  status: VpnStatus;
+  connectedAt: string | null;
+  onToggle: () => void;
+  sessions: { user: string; ip: string; location: string; since: string; activity: string }[];
+}) {
+  const isConnected = status === "connected";
+  const isConnecting = status === "connecting";
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      {/* Status card */}
+      <div
+        className="rounded-2xl p-6"
+        style={{
+          background: isConnected
+            ? "rgba(34,197,94,.06)"
+            : isConnecting
+            ? "rgba(251,191,36,.06)"
+            : "rgba(255,255,255,.03)",
+          border: `1px solid ${isConnected ? "rgba(34,197,94,.2)" : isConnecting ? "rgba(251,191,36,.2)" : "rgba(201,164,76,.12)"}`,
+        }}
+      >
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            {/* Animated status dot */}
+            <div className="relative">
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center text-2xl"
+                style={{
+                  background: isConnected
+                    ? "rgba(34,197,94,.15)"
+                    : isConnecting
+                    ? "rgba(251,191,36,.15)"
+                    : "rgba(255,255,255,.05)",
+                }}
+              >
+                {isConnected ? "🔒" : isConnecting ? "⏳" : "🔓"}
+              </div>
+              {isConnected && (
+                <span
+                  className="absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-[#060910] pulse-dot"
+                  style={{ background: "#4ade80" }}
+                />
+              )}
+            </div>
+            <div>
+              <p className="text-lg font-black text-white">
+                {isConnected ? "VPN Connessa" : isConnecting ? "Connessione in corso…" : "VPN Disconnessa"}
+              </p>
+              <p className="text-sm text-[#8899b4] mt-0.5">
+                {isConnected
+                  ? `Tunnel sicuro attivo dalle ${connectedAt} — Server MetaFan HQ`
+                  : isConnecting
+                  ? "Autenticazione e handshake TLS in corso…"
+                  : "Nessun tunnel attivo — accesso remoto disabilitato"}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onToggle}
+            disabled={isConnecting}
+            className="px-6 py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-60"
+            style={
+              isConnected
+                ? { background: "rgba(239,68,68,.15)", color: "#f87171", border: "1px solid rgba(239,68,68,.3)" }
+                : { background: "linear-gradient(135deg,#c9a44c,#a88630)", color: "#060910" }
+            }
+          >
+            {isConnecting ? "Connessione…" : isConnected ? "Disconnetti VPN" : "Connetti VPN"}
+          </button>
+        </div>
+
+        {/* Connecting progress bar */}
+        {isConnecting && (
+          <div className="mt-4 rounded-full overflow-hidden" style={{ height: 4, background: "rgba(255,255,255,.06)" }}>
+            <div
+              className="h-full rounded-full"
+              style={{
+                background: "linear-gradient(90deg,#c9a44c,#4ade80)",
+                animation: "vpnProgress 2.5s ease-out forwards",
+                width: "100%",
+              }}
+            />
+            <style>{`@keyframes vpnProgress { from { width:0 } to { width:100% } }`}</style>
+          </div>
+        )}
+      </div>
+
+      {/* Server info */}
+      {isConnected && (
+        <div className="grid sm:grid-cols-3 gap-4">
+          {[
+            { label: "Server",   value: "MetaFan HQ (10.10.0.1)" },
+            { label: "Protocollo", value: "OpenVPN / AES-256-GCM" },
+            { label: "Latenza",  value: "12 ms" },
+          ].map(({ label, value }) => (
+            <div
+              key={label}
+              className="rounded-xl p-4"
+              style={{ background: "rgba(201,164,76,.04)", border: "1px solid rgba(201,164,76,.1)" }}
+            >
+              <p className="text-xs text-[#8899b4] uppercase tracking-wider mb-1">{label}</p>
+              <p className="text-sm font-bold text-white">{value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Connected employees */}
+      {isConnected && (
+        <div className="glow-card rounded-xl overflow-hidden">
+          <div className="px-5 py-4" style={{ borderBottom: "1px solid rgba(201,164,76,.08)" }}>
+            <h3 className="font-bold text-white text-sm flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full pulse-dot" style={{ background: "#4ade80" }} />
+              Sessioni Dipendenti Attive
+              <span className="ml-auto text-xs text-[#8899b4]">{sessions.length} connessi</span>
+            </h3>
+          </div>
+          <div className="divide-y" style={{ borderColor: "rgba(201,164,76,.06)" }}>
+            {sessions.map((s) => (
+              <div key={s.user} className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: "rgba(201,164,76,.15)", color: "#c9a44c" }}>
+                  {s.user.split(" ").map((n) => n[0]).join("")}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white">{s.user}</p>
+                  <p className="text-xs text-[#8899b4]">{s.ip} · {s.location}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs text-[#8899b4]">{s.activity}</p>
+                  <p className="text-[11px] text-[#556680]">Da {s.since}</p>
+                </div>
+                <span
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ background: "#4ade80" }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Disconnected state hint */}
+      {status === "disconnected" && (
+        <div
+          className="rounded-xl p-5"
+          style={{ background: "rgba(201,164,76,.04)", border: "1px solid rgba(201,164,76,.08)" }}
+        >
+          <p className="text-xs text-[#8899b4] leading-relaxed">
+            <span className="text-[#c9a44c] font-semibold">Come funziona:</span> La VPN aziendale crea un tunnel crittografato
+            tra il dispositivo remoto e i server interni MetaFan. Una volta connesso, i dipendenti
+            possono accedere al gestionale da qualsiasi rete in modo sicuro, con la stessa esperienza
+            di un accesso locale.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────── Sub-components ─────────────────────────── */
 
 function TableSelector({ tables, selected, onSelect }: { tables: string[]; selected: string; onSelect: (t: string) => void }) {
   return (
@@ -617,11 +1107,7 @@ function ResponsiveRows({
                 <p className="mt-1 text-xs text-[#8899b4]">{columns.length} campi</p>
               </div>
               {actionLabel && onAction && (
-                <button
-                  onClick={() => onAction(row)}
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold"
-                  style={actionStyle}
-                >
+                <button onClick={() => onAction(row)} className="rounded-lg px-3 py-1.5 text-xs font-semibold" style={actionStyle}>
                   {actionLabel}
                 </button>
               )}
@@ -652,11 +1138,7 @@ function ResponsiveRows({
                 {columns.map((column) => <td key={column.Field}>{String(row[column.Field] ?? "")}</td>)}
                 {actionLabel && onAction && (
                   <td>
-                    <button
-                      onClick={() => onAction(row)}
-                      className="rounded px-3 py-1 text-xs font-semibold"
-                      style={actionStyle}
-                    >
+                    <button onClick={() => onAction(row)} className="rounded px-3 py-1 text-xs font-semibold" style={actionStyle}>
                       {actionLabel}
                     </button>
                   </td>
@@ -674,21 +1156,9 @@ function getInputType(column: Column) {
   const field = column.Field.toLowerCase();
   const type = column.Type.toUpperCase();
 
-  if (field.includes("email")) {
-    return "email";
-  }
-
-  if (field.includes("timestamp")) {
-    return "datetime-local";
-  }
-
-  if (field.includes("data")) {
-    return "date";
-  }
-
-  if (/INT|REAL|FLOA|DOUB|NUMERIC|DECIMAL/.test(type)) {
-    return "number";
-  }
-
+  if (field.includes("email")) return "email";
+  if (field.includes("timestamp")) return "datetime-local";
+  if (field.includes("data")) return "date";
+  if (/INT|REAL|FLOA|DOUB|NUMERIC|DECIMAL/.test(type)) return "number";
   return "text";
 }
