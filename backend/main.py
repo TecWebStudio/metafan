@@ -67,6 +67,7 @@ class RobotConfig:
     opc_node_reconn: str   # nodo OPC UA → contatore tentativi riconnessione
     opc_type: str   # "Int16" o "Int32"
 
+
 ROBOTS_CONFIG = [
     RobotConfig(
         name = "UR3_Robot_1",
@@ -150,6 +151,10 @@ def setup_opc_nodes(opc_client, config: RobotConfig):
     return nodes, node_conn, node_reconn
 
 
+# ******************** #
+# CONNESSIONE TURSO DB #
+# ******************** #
+
 def turso_arg(value):
     if value is None:
         return {"type": "null"}
@@ -203,7 +208,7 @@ def turso_exec(sql: str, args=None):
     return first.get("response", {}).get("result", {})
 
 
-def save_robot_readings_to_db(config: RobotConfig, values_by_desc: dict):
+def saveReadsToDB(config: RobotConfig, values_by_desc: dict):
     """Inserisce una riga in rilevazione_processo per ogni registro letto dal robot."""
     now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     id_linea = ROBOT_LINE_MAP.get(config.name, 1)
@@ -253,7 +258,7 @@ try:
             log.info("[%s] %s — valore letto: %s", cfg.name, rm.description, current)
             writeNode(nodes[rm.opc_node], 0, opc_type, f"{cfg.name}/{rm.description}")
 
-        save_robot_readings_to_db(cfg, robot_values)
+        saveReadsToDB(cfg, robot_values)
 
     writeNode(node_system, 0, variantType(ROBOTS_CONFIG[0].opc_type), "STATO SISTEMA")
     log.info("Scrittura completata per tutti i robot.")

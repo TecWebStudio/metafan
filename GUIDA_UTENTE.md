@@ -41,13 +41,13 @@ Se le credenziali sono corrette si viene reindirizzati automaticamente all'**are
 
 Il sito pubblico è accessibile a tutti, senza bisogno di login. Contiene le seguenti sezioni:
 
-| Sezione | Contenuto |
-|---|---|
-| **Home** | Presentazione aziendale e highlights I4.0 |
-| **Servizi** | Dettaglio dei servizi offerti con cooperazione uomo-macchina |
-| **Tecnologia** | Stack tecnologico, parco macchine e certificazioni |
-| **Chi siamo** | Storia, valori e team dell'azienda |
-| **Contatti** | Modulo di contatto e recapiti |
+| Sezione        | Contenuto                                                    |
+| -------------- | ------------------------------------------------------------ |
+| **Home**       | Presentazione aziendale e highlights I4.0                    |
+| **Servizi**    | Dettaglio dei servizi offerti con cooperazione uomo-macchina |
+| **Tecnologia** | Stack tecnologico, parco macchine e certificazioni           |
+| **Chi siamo**  | Storia, valori e team dell'azienda                           |
+| **Contatti**   | Modulo di contatto e recapiti                                |
 
 ### Sezione Servizi — Cooperazione Uomo-Macchina
 
@@ -95,22 +95,47 @@ Cliccando su una tabella nell'elenco si viene portati direttamente alla visualiz
 
 La sezione **Ordini Produzione** mostra la dashboard operativa della linea di produzione.
 
-### Cosa viene visualizzato
+### Selezione fonte dati — Mock / PLC
 
-- **Tabella ordini**: elenco degli ordini attivi con codice, prodotto, quantità, ore stimate, tempo medio per pezzo e consumo energetico
-- **Grafico consumi**: andamento del consumo energetico per ciascun ordine
-- **KPI aggregati**: totale pezzi, ore totali, consumo totale
+In alto a destra nella sezione è presente il pulsante **Fonte dati**. Permette di scegliere da dove provengono i dati visualizzati:
 
-### Come leggere i dati
+| Modalità | Colore pulsante | Descrizione                                                                                                                             |
+| -------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Mock** | Oro             | Dati simulati generati automaticamente (24 ordini sintetici). Sempre disponibile, utile per demo e test.                                |
+| **PLC**  | Verde           | Dati reali letti dal robot UR3 e salvati nel database. Disponibile solo quando `backend/main.py` è in esecuzione e il robot è connesso. |
 
-| Colonna | Significato |
-|---|---|
-| Codice | Identificativo univoco dell'ordine |
-| Prodotto | Nome del prodotto da realizzare |
-| Quantità | Numero di pezzi da produrre |
-| Ore stimate | Ore di lavorazione previste |
-| Tempo/pezzo | Minuti medi per unità prodotta |
-| Consumo (kWh) | Energia consumata per completare l'ordine |
+Per cambiare modalità, cliccare il pulsante: alterna tra Mock e PLC ad ogni click. L'etichetta **In uso** accanto al pulsante conferma quale fonte è effettivamente attiva.
+
+#### Vista Mock
+
+Mostra la dashboard BI completa con:
+
+- **4 KPI card** — totale ordini, ore lavorate, consumo energetico, tempo medio ciclo
+- **Banner risparmio energetico** — confronto consumi reali vs standard di mercato
+- **Analisi per macchina** — una card per ciascuna delle 8 macchine industriali
+- **Tabella ordini** — ordinabile per macchina, ore lavorate o tempo di produzione; ogni riga ha un badge esito colorato (verde/rosso/giallo) e un pulsante **Apri** per il dettaglio completo
+
+#### Vista PLC
+
+Mostra i dati reali acquisiti dal robot UR3 tramite OPC UA. Il contenuto cambia rispetto alla vista Mock:
+
+- **3 card di riepilogo** — numero totale di rilevazioni nel database, numero di cicli di lettura distinti, timestamp dell'ultima lettura
+- **Snapshot robot** — griglia con i valori dell'ultimo ciclo di lettura, uno per ogni registro (Robot Mode, is PowerOn, ecc.). Il valore appare in verde quando il segnale è attivo (≠ 0), in oro quando è inattivo (= 0)
+- **Tabella storica** — elenco delle ultime 500 rilevazioni con timestamp, linea di produzione, nome parametro e valore
+
+Se il database non contiene ancora rilevazioni, viene mostrato un messaggio informativo che indica che il programma `backend/main.py` deve essere avviato.
+
+### Come leggere i dati (vista Mock)
+
+| Colonna     | Significato                                                                   |
+| ----------- | ----------------------------------------------------------------------------- |
+| Codice      | Identificativo univoco dell'ordine                                            |
+| Macchina    | Nome della macchina industriale                                               |
+| Ore         | Ore di lavorazione effettuate                                                 |
+| Tempo (min) | Durata totale del ciclo di produzione                                         |
+| Consumo     | Energia consumata; la freccia verde ↓ indica risparmio rispetto allo standard |
+| Esito       | Superato / Scarto / Necessita revisione                                       |
+| Data        | Data della produzione                                                         |
 
 > Tutti i valori sono garantiti non negativi. Se un valore apparisse anomalo, contattare il responsabile di produzione.
 
@@ -146,30 +171,34 @@ Cliccare il pulsante **Gestisci** sulla scheda di una macchina per aprire il pan
 Il pannello mostra:
 
 #### Livello potenza
+
 - Uno **slider** da 0% a 100% per regolare il livello di potenza della macchina.
 - I valori di potenza (kW), consumo (kWh) e temperatura (°C) si aggiornano in tempo reale.
 - Lo slider è disabilitato quando la macchina è in stato **Offline**.
 
 #### Statistiche live
+
 Tre indicatori mostrano i valori attuali calcolati:
 
-| Indicatore | Descrizione |
-|---|---|
-| Potenza | kW assorbiti al livello impostato |
-| Consumo | kWh per ciclo al livello impostato |
-| Temp. | Temperatura operativa stimata; diventa rossa se supera l'85% del massimo |
+| Indicatore | Descrizione                                                              |
+| ---------- | ------------------------------------------------------------------------ |
+| Potenza    | kW assorbiti al livello impostato                                        |
+| Consumo    | kWh per ciclo al livello impostato                                       |
+| Temp.      | Temperatura operativa stimata; diventa rossa se supera l'85% del massimo |
 
 #### Specifiche nominali
+
 Valori di riferimento fissi della macchina (potenza nominale e consumo massimo a ciclo completo).
 
 #### Stato operativo
+
 Tre pulsanti per cambiare lo stato della macchina:
 
-| Stato | Significato |
-|---|---|
-| **Attiva** | Macchina in funzione normale |
-| **Manutenzione** | Macchina ferma per intervento tecnico |
-| **Offline** | Macchina spenta, esclusa dai calcoli aggregati |
+| Stato            | Significato                                    |
+| ---------------- | ---------------------------------------------- |
+| **Attiva**       | Macchina in funzione normale                   |
+| **Manutenzione** | Macchina ferma per intervento tecnico          |
+| **Offline**      | Macchina spenta, esclusa dai calcoli aggregati |
 
 Cliccare **Chiudi** per chiudere il pannello senza perdere le modifiche.
 
@@ -181,11 +210,11 @@ La sezione **VPN Aziendale** permette di simulare la connessione al tunnel sicur
 
 ### Stati della VPN
 
-| Stato | Significato |
-|---|---|
-| **Disconnessa** | Nessun tunnel attivo |
+| Stato                    | Significato                                                      |
+| ------------------------ | ---------------------------------------------------------------- |
+| **Disconnessa**          | Nessun tunnel attivo                                             |
 | **Connessione in corso** | Autenticazione e handshake TLS in esecuzione (circa 2-3 secondi) |
-| **Connessa** | Tunnel sicuro attivo, accesso remoto abilitato |
+| **Connessa**             | Tunnel sicuro attivo, accesso remoto abilitato                   |
 
 ### Come connettersi
 
@@ -203,6 +232,7 @@ Una volta connessa vengono mostrati:
 Cliccare il pulsante **Disconnetti VPN**. Il tunnel viene chiuso immediatamente.
 
 > Nella barra laterale, una spia colorata accanto alla voce "VPN Aziendale" segnala lo stato:
+>
 > - **Gialla**: connessione in corso
 > - **Verde**: connessa
 
@@ -274,9 +304,9 @@ Per uscire dalla piattaforma:
 
 ## 10. Account disponibili
 
-| Username | Password | Ruolo |
-|---|---|---|
-| `metafan` | `metapassword` | Amministratore |
+| Username  | Password       | Ruolo             |
+| --------- | -------------- | ----------------- |
+| `metafan` | `metapassword` | Amministratore    |
 | `azienda` | `MetaFan2026!` | Account aziendale |
 
 > Le credenziali sono riservate al personale autorizzato. Non condividerle con soggetti esterni.
@@ -286,21 +316,26 @@ Per uscire dalla piattaforma:
 ## 11. Problemi frequenti
 
 ### Non riesco ad accedere alla dashboard
+
 Verificare di aver inserito correttamente username e password (rispettano maiuscole/minuscole).
 Se il problema persiste, contattare l'amministratore di sistema.
 
 ### La barra laterale scompare durante lo scroll
+
 Aggiornare la pagina. Se il problema si ripresenta, svuotare la cache del browser (Ctrl+Shift+R su Windows/Linux, Cmd+Shift+R su Mac).
 
 ### I valori degli ordini sembrano anomali
+
 I dati degli ordini sono calcolati in tempo reale. Aggiornare la pagina per ricaricare i valori più recenti.
 
 ### La VPN non si connette
+
 La connessione impiega circa 2-3 secondi. Attendere il completamento della barra di progresso prima di riprovare.
 
 ### Un campo del database non accetta il valore inserito
+
 Verificare che il tipo di dato sia corretto (es. non inserire testo in un campo numerico). I campi numerici accettano solo valori uguali o maggiori di zero.
 
 ---
 
-*Guida utente MetaFan — uso interno riservato al personale aziendale.*
+_Guida utente MetaFan — uso interno riservato al personale aziendale._

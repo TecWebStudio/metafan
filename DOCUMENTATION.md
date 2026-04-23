@@ -35,16 +35,16 @@ Il sito è accessibile pubblicamente; la dashboard richiede autenticazione via c
 
 ## 2. Stack Tecnologico
 
-| Layer | Tecnologia | Versione |
-|---|---|---|
-| Framework | Next.js (App Router) | 16.x |
-| UI Library | React | 19.x |
-| Language | TypeScript | 5.x |
-| Styling | Tailwind CSS | v4 |
-| Database | Turso (libSQL / SQLite edge) | latest |
-| DB Client | @libsql/client | latest |
-| Runtime | Node.js | 20+ |
-| Deployment | Vercel (consigliato) | — |
+| Layer      | Tecnologia                   | Versione |
+| ---------- | ---------------------------- | -------- |
+| Framework  | Next.js (App Router)         | 16.x     |
+| UI Library | React                        | 19.x     |
+| Language   | TypeScript                   | 5.x      |
+| Styling    | Tailwind CSS                 | v4       |
+| Database   | Turso (libSQL / SQLite edge) | latest   |
+| DB Client  | @libsql/client               | latest   |
+| Runtime    | Node.js                      | 20+      |
+| Deployment | Vercel (consigliato)         | —        |
 
 ### Dipendenze principali
 
@@ -120,29 +120,29 @@ Il design system è definito in `app/globals.css` e usa Tailwind CSS v4 con toke
 
 ### Palette colori
 
-| Variabile CSS | Valore | Uso |
-|---|---|---|
-| `--gold` | `#c9a44c` | Accento principale |
-| `--gold-light` | `#e2c373` | Gradienti, highlight |
-| `--gold-dark` | `#a88630` | Hover, ombre |
-| `--bg-primary` | `#060910` | Sfondo globale |
-| `--surface-1` | `#0c1120` | Card primer livello |
-| `--surface-2` | `#111827` | Card secondo livello |
-| `--surface-3` | `#1a2332` | Bordi, testate tabelle |
-| `--surface-4` | `#212d40` | Elementi interattivi |
+| Variabile CSS  | Valore    | Uso                    |
+| -------------- | --------- | ---------------------- |
+| `--gold`       | `#c9a44c` | Accento principale     |
+| `--gold-light` | `#e2c373` | Gradienti, highlight   |
+| `--gold-dark`  | `#a88630` | Hover, ombre           |
+| `--bg-primary` | `#060910` | Sfondo globale         |
+| `--surface-1`  | `#0c1120` | Card primer livello    |
+| `--surface-2`  | `#111827` | Card secondo livello   |
+| `--surface-3`  | `#1a2332` | Bordi, testate tabelle |
+| `--surface-4`  | `#212d40` | Elementi interattivi   |
 
 ### Classi utility principali
 
-| Classe | Comportamento |
-|---|---|
-| `.glow-card` | Card con hover lift + ombra gold |
-| `.text-gradient` | Testo con gradiente gold |
-| `.hero-grid` | Pattern griglia sottile (sfondo hero) |
-| `.dash-table` | Stili tabella dashboard |
-| `.animate-fade-up` | Animazione fadeUp 0.6s |
-| `.pulse-dot` | Punto pulsante (status indicatori) |
-| `.spin` | Spinner rotante |
-| `.stagger-1` … `.stagger-6` | Delay animazioni scaglionate |
+| Classe                      | Comportamento                         |
+| --------------------------- | ------------------------------------- |
+| `.glow-card`                | Card con hover lift + ombra gold      |
+| `.text-gradient`            | Testo con gradiente gold              |
+| `.hero-grid`                | Pattern griglia sottile (sfondo hero) |
+| `.dash-table`               | Stili tabella dashboard               |
+| `.animate-fade-up`          | Animazione fadeUp 0.6s                |
+| `.pulse-dot`                | Punto pulsante (status indicatori)    |
+| `.spin`                     | Spinner rotante                       |
+| `.stagger-1` … `.stagger-6` | Delay animazioni scaglionate          |
 
 ### Animazioni CSS
 
@@ -159,6 +159,7 @@ Il design system è definito in `app/globals.css` e usa Tailwind CSS v4 con toke
 ### 5.1 Homepage (`app/page.tsx`)
 
 Pagina di presentazione principale con:
+
 - Hero section con CTA
 - Grid servizi in anteprima
 - Sezione I4.0 highlights
@@ -169,6 +170,7 @@ Pagina di presentazione principale con:
 **Componente client** (richiede `"use client"`).
 
 Visualizza 6 card di servizio, ciascuna con:
+
 - Icona, titolo, descrizione, features list
 - **Pannello espandibile "Cooperazione Uomo-Macchina"** (I4.0)
   - Due colonne: ruolo Operatore vs ruolo Sistema I4.0
@@ -177,13 +179,13 @@ Visualizza 6 card di servizio, ciascuna con:
 
 **Servizi disponibili:**
 
-| Servizio | KPI Cowork |
-|---|---|
-| Progettazione PCB | −65% errori design |
-| Soluzioni IoT | −70% tempo risposta allarmi |
-| Sistemi AR/VR | −40% errori operativi |
-| Stampa 3D | Iterazioni prototipo 5→2 |
-| Firmware & Embedded | −55% debug time |
+| Servizio               | KPI Cowork                     |
+| ---------------------- | ------------------------------ |
+| Progettazione PCB      | −65% errori design             |
+| Soluzioni IoT          | −70% tempo risposta allarmi    |
+| Sistemi AR/VR          | −40% errori operativi          |
+| Stampa 3D              | Iterazioni prototipo 5→2       |
+| Firmware & Embedded    | −55% debug time                |
 | Manifattura & Collaudo | Scarto 2.5%, +73% produttività |
 
 **State:** `expandedId: string | null` — ID del pannello aperto (uno alla volta).
@@ -193,6 +195,7 @@ Visualizza 6 card di servizio, ciascuna con:
 **Componente client** (richiede `"use client"`).
 
 Sezioni:
+
 1. **Pilastri I4.0** — 4 card con metriche (riduzione consumi, integrazione dati, HMI, BI)
 2. **Tabella comparativa** — Mercato tradizionale vs MetaFan su 6 parametri
 3. **Parco Macchine** — 8 macchine industriali con controlli di gestione
@@ -205,25 +208,26 @@ Ogni macchina ha uno stato gestibile interattivamente:
 
 ```typescript
 interface MachineConfig {
-  power: number;         // 0–100% livello potenza
+  power: number; // 0–100% livello potenza
   status: MachineStatus; // 'active' | 'maintenance' | 'offline'
 }
 ```
 
 **Specifiche base macchine:**
 
-| Macchina | Potenza (kW) | Consumo ciclo (kWh) | Temp. max (°C) |
-|---|---|---|---|
-| CNC Fresatrice 5-Assi | 7.5 | 3.2 | 85 |
-| Pick & Place SMT | 2.1 | 1.8 | 45 |
-| Reflow Oven IR | 12.0 | 4.8 | 260 |
-| AOI Saki BF-Comet | 0.8 | 0.6 | 40 |
-| Stampante 3D SLS | 3.5 | 2.8 | 200 |
-| Laser Cutter CO₂ | 5.0 | 3.5 | 60 |
-| Saldatrice a Onda | 8.0 | 4.2 | 250 |
-| Flying Probe Tester | 0.5 | 0.4 | 35 |
+| Macchina              | Potenza (kW) | Consumo ciclo (kWh) | Temp. max (°C) |
+| --------------------- | ------------ | ------------------- | -------------- |
+| CNC Fresatrice 5-Assi | 7.5          | 3.2                 | 85             |
+| Pick & Place SMT      | 2.1          | 1.8                 | 45             |
+| Reflow Oven IR        | 12.0         | 4.8                 | 260            |
+| AOI Saki BF-Comet     | 0.8          | 0.6                 | 40             |
+| Stampante 3D SLS      | 3.5          | 2.8                 | 200            |
+| Laser Cutter CO₂      | 5.0          | 3.5                 | 60             |
+| Saldatrice a Onda     | 8.0          | 4.2                 | 250            |
+| Flying Probe Tester   | 0.5          | 0.4                 | 35             |
 
 **Calcoli live:**
+
 - `currentPower = basePowerKw × (power / 100)`
 - `currentConsumption = baseConsumptionKwh × (power / 100)`
 - `currentTemp = maxTempC × (power / 100) × 0.9`
@@ -237,6 +241,7 @@ Pagina statica con storia, valori e team aziendale.
 ### 5.5 Contatti (`app/contact/page.tsx`)
 
 Componente client con form di contatto:
+
 - Campi: nome, email, oggetto, messaggio
 - Validazione lato client
 - Invio via `fetch` (attualmente con risposta simulata)
@@ -244,6 +249,7 @@ Componente client con form di contatto:
 ### 5.6 Login (`app/login/page.tsx`)
 
 Componente client con form di autenticazione.
+
 - `POST /api/login` con username e password
 - In caso di successo: redirect a `/dashboard`
 - In caso di errore: mostra messaggio inline
@@ -260,6 +266,7 @@ a `/dashboard` se `mf_session !== "1"`.
 ### Layout
 
 Il layout usa `h-screen overflow-hidden` sull'elemento radice per garantire che:
+
 - La sidebar rimanga **sempre visibile** indipendentemente dall'altezza del contenuto
 - Lo scrolling avvenga solo nell'elemento `<main>` (interno)
 - La sidebar non si sposti mai durante lo scorrimento
@@ -284,27 +291,29 @@ Il layout usa `h-screen overflow-hidden` sull'elemento radice per garantire che:
 
 ### Viste disponibili
 
-| View ID | Descrizione |
-|---|---|
-| `overview` | KPI stats + lista tabelle DB |
-| `ordini` | Dashboard ordini produzione (BI) |
-| `vpn` | Pannello VPN aziendale |
-| `view` | Visualizza dati di una tabella |
-| `add` | Inserisci un nuovo record |
-| `edit` | Modifica un record esistente |
-| `delete` | Elimina un record |
-| `drop` | Elimina una tabella intera |
+| View ID    | Descrizione                      |
+| ---------- | -------------------------------- |
+| `overview` | KPI stats + lista tabelle DB     |
+| `ordini`   | Dashboard ordini produzione (BI) |
+| `vpn`      | Pannello VPN aziendale           |
+| `view`     | Visualizza dati di una tabella   |
+| `add`      | Inserisci un nuovo record        |
+| `edit`     | Modifica un record esistente     |
+| `delete`   | Elimina un record                |
+| `drop`     | Elimina una tabella intera       |
 
 ### Funzionalità VPN
 
 Il pannello VPN (`view === "vpn"`) simula una connessione VPN aziendale:
 
 **Stati:**
+
 - `disconnected` — nessun tunnel attivo
 - `connecting` — handshake in corso (2.5 secondi simulati con `setTimeout`)
 - `connected` — tunnel sicuro attivo
 
 **Quando connesso mostra:**
+
 - Server: MetaFan HQ (10.10.0.1) · Protocollo: OpenVPN / AES-256-GCM · Latenza: 12ms
 - Lista sessioni dipendenti attive con IP, location, attività corrente
 - Un indicatore animato (pulse-dot verde)
@@ -326,14 +335,18 @@ numerici (rilevati via `getInputType()`), impedendo l'inserimento di valori nega
 ### Sub-componenti
 
 #### `TableSelector`
+
 Barra di tab per selezionare la tabella attiva.
 
 #### `ResponsiveRows`
+
 Tabella dati responsive:
+
 - **Desktop** (`md:`) → `<table>` classica con header sticky
 - **Mobile** → card grid con tutti i campi espansi
 
 **Props:**
+
 ```typescript
 {
   columns: Column[];
@@ -347,9 +360,11 @@ Tabella dati responsive:
 ```
 
 #### `VpnPanel`
+
 Pannello VPN autonomo.
 
 **Props:**
+
 ```typescript
 {
   status: VpnStatus;
@@ -360,10 +375,13 @@ Pannello VPN autonomo.
 ```
 
 #### `Spinner`
+
 Indicatore di caricamento centrato.
 
 #### `getInputType(column: Column)`
+
 Funzione che mappa il tipo di colonna DB al tipo HTML input:
+
 - `email` per campi con "email" nel nome
 - `datetime-local` per "timestamp"
 - `date` per "data"
@@ -379,6 +397,7 @@ Funzione che mappa il tipo di colonna DB al tipo HTML input:
 **Componente client** — navigazione principale del sito pubblico.
 
 **Comportamento:**
+
 - Trasparente quando la pagina è in cima
 - Sfondo scuro con blur (`rgba(12,17,32,.85)`) dopo 40px di scroll
 - Link attivo evidenziato con bordo gold
@@ -386,18 +405,19 @@ Funzione che mappa il tipo di colonna DB al tipo HTML input:
 
 **Link di navigazione:**
 
-| Label | Path |
-|---|---|
-| Home | `/` |
-| Chi Siamo | `/about` |
-| Servizi | `/services` |
-| Tecnologie | `/technology` |
-| Contatti | `/contact` |
-| Area Gestione (CTA gold) | `/login` |
+| Label                    | Path          |
+| ------------------------ | ------------- |
+| Home                     | `/`           |
+| Chi Siamo                | `/about`      |
+| Servizi                  | `/services`   |
+| Tecnologie               | `/technology` |
+| Contatti                 | `/contact`    |
+| Area Gestione (CTA gold) | `/login`      |
 
 ### 7.2 Footer (`components/Footer.tsx`)
 
 Footer statico con:
+
 - Logo MetaFan
 - Colonne di link: Servizi, Azienda, Contatti
 - Link social
@@ -407,25 +427,51 @@ Footer statico con:
 
 Dashboard BI per gli ordini di produzione. Usato in `dashboard/page.tsx` con `view === "ordini"`.
 
-**Struttura:**
+#### Toggle fonte dati (Mock / PLC)
+
+In alto a destra è presente un pulsante che alterna la fonte dati tra due modalità:
+
+| Valore `source` | Colore | Endpoint chiamato             | Contenuto mostrato                            |
+| --------------- | ------ | ----------------------------- | --------------------------------------------- |
+| `"mock"`        | Oro    | `GET /api/orders?source=mock` | Dashboard BI completa con 24 ordini sintetici |
+| `"plc"`         | Verde  | `GET /api/plc-readings`       | Pannello rilevazioni robot PLC                |
+
+L'etichetta **In uso** accanto al pulsante riflette `sourceUsed`, che conferma la fonte effettivamente utilizzata dall'API.
+
+#### Vista Mock (`source === "mock"`)
 
 1. **4 KPI Cards** — Totale ordini, Ore lavorate, Consumo energetico, Tempo medio ciclo
 2. **Banner risparmio energetico** — Confronto vs standard di mercato
 3. **Analisi per macchina** — Grid card per ogni macchina con ordini, ore, kWh, risparmio%, qualità%
 4. **Tabella ordini** — Ordinabile per macchina/ore/tempo, con badge esito colorati
-5. **Modal dettaglio ordine** — Immagine macchina, esito, spec energetiche, risorse, descrizione ciclo, interpretazione dati I4.0
+5. **Modal dettaglio ordine** — Immagine macchina, esito, spec energetiche, risorse, descrizione ciclo
+
+#### Vista PLC (`source === "plc"`) — `PlcReadingsPanel`
+
+Componente dedicato che mostra le rilevazioni reali del robot UR3 da `rilevazione_processo`:
+
+1. **3 card di riepilogo** — totale rilevazioni, cicli di lettura distinti, timestamp ultima lettura
+2. **Snapshot ultimo ciclo** — una card per registro; valore verde se attivo (≠ 0), oro se inattivo (= 0)
+3. **Tabella storica** — ultime 500 rilevazioni con timestamp, linea, nome parametro, valore, unità di misura
+
+Stati gestiti:
+
+- **Nessuna rilevazione** — messaggio informativo con istruzioni per avviare `main.py`
+- **Errore API** — banner rosso con il messaggio di errore restituito
 
 **Tipi principali:**
 
 ```typescript
+type OrdersSource = "mock" | "plc";
+
 interface ProductionOrder {
   id: number;
-  codice_ordine: string;       // ORD-2026-XXXX
+  codice_ordine: string; // ORD-2026-XXXX
   macchina: MachineType;
-  immagine_macchina: string;   // Path SVG
-  ore_lavorate: number;        // >= 0.5h (clamped)
+  immagine_macchina: string; // Path SVG
+  ore_lavorate: number; // >= 0.5h (clamped)
   tempo_produzione_min: number; // >= 1 min
-  consumo_kwh: number;         // >= 0.1 kWh
+  consumo_kwh: number; // >= 0.1 kWh
   consumo_standard_kwh: number; // Riferimento mercato
   risorse_utilizzate: string[];
   descrizione_ciclo: string;
@@ -434,9 +480,20 @@ interface ProductionOrder {
   operatore: string;
   lotto: string;
 }
+
+interface PlcReading {
+  id_rilevazione: number;
+  id_linea: number;
+  id_parametro: string; // es. "ROBOT_MODE"
+  nome_parametro: string; // es. "Robot Mode"
+  unita_misura: string; // es. "0/1" o "mode code"
+  valore: number;
+  timestamp: string; // ISO 8601
+}
 ```
 
-**Logica esito (colori badge):**
+**Logica esito (colori badge, vista Mock):**
+
 - `Superato` → verde `#4ade80`
 - `Scarto` → rosso `#f87171`
 - `Necessita revisione` → giallo `#fbbf24`
@@ -452,21 +509,25 @@ interface ProductionOrder {
 Autentica l'utente e imposta i cookie di sessione.
 
 **Request body:**
+
 ```json
 { "username": "string", "password": "string" }
 ```
 
 **Response (successo):**
+
 ```json
 { "ok": true, "role": "admin" | "company" }
 ```
 
 **Response (errore):**
+
 ```json
-{ "ok": false, "error": "Credenziali non valide" }  // 401
+{ "ok": false, "error": "Credenziali non valide" } // 401
 ```
 
 **Cookie impostati:**
+
 - `mf_session=1` — httpOnly, 8h, sameSite: lax
 - `mf_user=<username>` — non-httpOnly, 8h (per display nel dashboard)
 
@@ -479,6 +540,7 @@ Autentica l'utente e imposta i cookie di sessione.
 Termina la sessione eliminando entrambi i cookie.
 
 **Response:**
+
 ```json
 { "ok": true }
 ```
@@ -491,26 +553,86 @@ Termina la sessione eliminando entrambi i cookie.
 
 Richiede autenticazione (`mf_session=1`).
 
-Genera e restituisce 24 ordini produzione sintetici con statistiche aggregate.
+Accetta il parametro `?source=mock` (default). Restituisce sempre dati mock: 24 ordini produzione sintetici con statistiche aggregate.
 
 **Response:**
+
 ```json
 {
   "ok": true,
   "orders": ProductionOrder[],
-  "stats": AggregatedStats
+  "stats": AggregatedStats,
+  "sourceUsed": "mock"
 }
 ```
 
-**AggregatedStats:**
+---
+
+### `GET /api/plc-readings`
+
+**File:** `app/api/plc-readings/route.ts`
+
+Richiede autenticazione (`mf_session=1`).
+
+Legge le rilevazioni reali del robot dal database Turso, unendo `rilevazione_processo` con `parametro_processo` per ottenere i nomi leggibili dei parametri.
+
+**Query eseguita:**
+
+```sql
+SELECT
+  r.id_rilevazione, r.id_linea, r.id_parametro,
+  COALESCE(p.nome_parametro, r.id_parametro) AS nome_parametro,
+  COALESCE(p.unita_misura, '')               AS unita_misura,
+  r.valore, r.timestamp
+FROM rilevazione_processo r
+LEFT JOIN parametro_processo p ON p.id_parametro = r.id_parametro
+ORDER BY r.timestamp DESC, r.id_rilevazione DESC
+LIMIT 500
+```
+
+**Response (successo):**
+
+```json
+{
+  "ok": true,
+  "readings": PlcReading[]
+}
+```
+
+**Response (errore):**
+
+```json
+{ "ok": false, "error": "Errore caricamento dati PLC" } // 500
+```
+
+**PlcReading:**
+
+```typescript
+interface PlcReading {
+  id_rilevazione: number;
+  id_linea: number;
+  id_parametro: string; // es. "ROBOT_MODE"
+  nome_parametro: string; // es. "Robot Mode"
+  unita_misura: string; // es. "0/1", "mode code"
+  valore: number;
+  timestamp: string; // "YYYY-MM-DDTHH:MM:SS"
+}
+```
+
+---
+
+### `GET /api/orders` — Statistiche aggregate
+
+**AggregatedStats** (restituito solo in modalità mock):
+
 ```typescript
 interface AggregatedStats {
   totale_ordini: number;
   ore_totali: number;
   consumo_totale_kwh: number;
   consumo_standard_totale_kwh: number;
-  risparmio_percentuale: number;  // Sempre >= 0
-  tasso_superamento: number;      // % ordini "Superato"
+  risparmio_percentuale: number; // Sempre >= 0
+  tasso_superamento: number; // % ordini "Superato"
   tempo_medio_min: number;
   per_macchina: {
     macchina: MachineType;
@@ -518,7 +640,7 @@ interface AggregatedStats {
     ore: number;
     consumo_kwh: number;
     consumo_standard_kwh: number;
-    risparmio_pct: number;        // Sempre >= 0
+    risparmio_pct: number; // Sempre >= 0
     tasso_superamento: number;
   }[];
 }
@@ -526,6 +648,7 @@ interface AggregatedStats {
 
 **Nota sulla generazione dati:**
 I valori numerici sono tutti clamped a valori positivi:
+
 ```typescript
 const ore         = Math.max(0.5,  ...);
 const tempoMin    = Math.max(1,    ...);
@@ -543,21 +666,21 @@ CRUD completo sul database Turso. Richiede autenticazione.
 
 **Azioni GET:**
 
-| `?action=` | Descrizione | Risposta |
-|---|---|---|
-| `tables` | Lista tabelle | `{ tables: string[] }` |
-| `stats` | Conteggio record per tabella | `{ stats: StatItem[] }` |
-| `columns` | Colonne di una tabella (`&table=`) | `{ columns, identityColumns }` |
-| `data` | Dati di una tabella (`&table=`) | `{ rows, identityColumns }` |
+| `?action=` | Descrizione                        | Risposta                       |
+| ---------- | ---------------------------------- | ------------------------------ |
+| `tables`   | Lista tabelle                      | `{ tables: string[] }`         |
+| `stats`    | Conteggio record per tabella       | `{ stats: StatItem[] }`        |
+| `columns`  | Colonne di una tabella (`&table=`) | `{ columns, identityColumns }` |
+| `data`     | Dati di una tabella (`&table=`)    | `{ rows, identityColumns }`    |
 
 **Azioni POST (body JSON):**
 
-| `action` | Parametri | Effetto |
-|---|---|---|
-| `insert` | `table, data` | Inserisce record |
-| `update` | `table, data, where` | Aggiorna record |
-| `delete` | `table, where` | Elimina record |
-| `drop` | `table` | Elimina tabella (DROP TABLE) |
+| `action` | Parametri            | Effetto                      |
+| -------- | -------------------- | ---------------------------- |
+| `insert` | `table, data`        | Inserisce record             |
+| `update` | `table, data, where` | Aggiorna record              |
+| `delete` | `table, where`       | Elimina record               |
+| `drop`   | `table`              | Elimina tabella (DROP TABLE) |
 
 ---
 
@@ -580,6 +703,7 @@ Client → POST /api/login
 ### Middleware (`middleware.ts`)
 
 Protegge tutte le route `/dashboard/*`:
+
 ```typescript
 if (pathname.startsWith("/dashboard")) {
   if (session !== "1") redirect → /login
@@ -589,10 +713,10 @@ if (pathname === "/login" && session === "1") redirect → /dashboard
 
 ### Cookie di sessione
 
-| Cookie | httpOnly | Durata | Valore |
-|---|---|---|---|
-| `mf_session` | Sì | 8 ore | `"1"` |
-| `mf_user` | No | 8 ore | username |
+| Cookie       | httpOnly | Durata | Valore   |
+| ------------ | -------- | ------ | -------- |
+| `mf_session` | Sì       | 8 ore  | `"1"`    |
+| `mf_user`    | No       | 8 ore  | username |
 
 ---
 
@@ -628,13 +752,14 @@ utilizza `rowid` (colonna virtuale SQLite).
 
 ## 11. Account Disponibili
 
-| Username | Password | Ruolo | Note |
-|---|---|---|---|
-| `metafan` | `metapassword` | admin | Account amministratore originale |
-| `azienda` | `MetaFan2026!` | company | Account aziendale aggiunto |
+| Username  | Password       | Ruolo   | Note                             |
+| --------- | -------------- | ------- | -------------------------------- |
+| `metafan` | `metapassword` | admin   | Account amministratore originale |
+| `azienda` | `MetaFan2026!` | company | Account aziendale aggiunto       |
 
 **⚠️ Sicurezza:** Le credenziali sono attualmente hardcoded in `app/api/login/route.ts`.
 In produzione si raccomanda di:
+
 1. Spostare le credenziali in variabili d'ambiente
 2. Usare un hash bcrypt per le password
 3. Implementare rate limiting sull'endpoint di login
@@ -673,9 +798,9 @@ In `app/api/login/route.ts`, aggiungi una entry all'array `VALID_CREDENTIALS`:
 
 ```typescript
 const VALID_CREDENTIALS = [
-  { username: "metafan",  password: "metapassword",  role: "admin"   },
-  { username: "azienda",  password: "MetaFan2026!",  role: "company" },
-  { username: "nuovo",    password: "NuovaPassword!", role: "operatore" }, // ← aggiunto
+  { username: "metafan", password: "metapassword", role: "admin" },
+  { username: "azienda", password: "MetaFan2026!", role: "company" },
+  { username: "nuovo", password: "NuovaPassword!", role: "operatore" }, // ← aggiunto
 ];
 ```
 
@@ -691,7 +816,9 @@ const VALID_CREDENTIALS = [
    ```
 3. Aggiungi il blocco JSX condizionale:
    ```tsx
-   {view === "nuova-vista" && <NuovaVista />}
+   {
+     view === "nuova-vista" && <NuovaVista />;
+   }
    ```
 
 ### Aggiungere una nuova macchina
@@ -717,9 +844,9 @@ I colori sono centralizzati in `app/globals.css`:
 
 ```css
 :root {
-  --gold:       #c9a44c;
+  --gold: #c9a44c;
   --gold-light: #e2c373;
-  --gold-dark:  #a88630;
+  --gold-dark: #a88630;
   --bg-primary: #060910;
   /* ... */
 }
@@ -727,4 +854,4 @@ I colori sono centralizzati in `app/globals.css`:
 
 ---
 
-*Fine documentazione — MetaFan v1.2.0*
+_Fine documentazione — MetaFan v1.2.0_
