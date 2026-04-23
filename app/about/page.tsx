@@ -10,10 +10,11 @@ const values = [
 ];
 
 const team = [
-  { name: "Marco Bianchi", role: "CEO & Co-Founder", area: "Strategia & Visione" },
-  { name: "Sofia Esposito", role: "CTO", area: "Architettura Hardware" },
-  { name: "Lorenzo Russo", role: "Head of R&D", area: "Innovazione & Prototipazione" },
-  { name: "Giulia Ferretti", role: "Operations Manager", area: "Produzione & Qualità" },
+  { name: "Marco Toselli", role: "CEO & Founder", area: "Strategia & Business Development" },
+  { name: "Stefano Casonato", role: "CTO", area: "Architettura Software & IoT" },
+  { name: "Filippo Sperandio", role: "Head of R&D", area: "Innovazione & Prototipazione" },
+  { name: "Matteo Saramin", role: "Operations Manager", area: "Produzione & Qualita" },
+  { name: "Matteo Tagliapietra", role: "Product Designer", area: "UX, Interfacce & Industrial Design" },
 ];
 
 const milestones = [
